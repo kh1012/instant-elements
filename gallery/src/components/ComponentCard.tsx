@@ -21,7 +21,7 @@ export function ComponentCard({ entry }: { entry: Entry }) {
     >
       <div
         ref={ref}
-        className="flex h-40 items-center justify-center overflow-hidden bg-st-background p-4"
+        className="preview-surface flex h-40 items-center justify-center overflow-hidden bg-st-background p-4"
       >
         {inView ? (
           <div className="scale-90">
