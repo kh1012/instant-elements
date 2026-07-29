@@ -9,6 +9,8 @@ import { listEntries, readEntry, validateEntry } from "../../registry/entry.js";
 import { appendHistory, isHistoryAction, readHistory } from "../../registry/history.js";
 import { buildIndex } from "../../registry/index-file.js";
 import { isCategory, isStatus } from "../../registry/schema.js";
+import { applySchema, computeSchema } from "../../schema/apply.js";
+import { listEntryNames } from "../../registry/entry.js";
 import { CliError, color, emitJson, info, ok, warn } from "../ui.js";
 
 /** `--x` 또는 `--x-file` 로 값을 받는다. 긴 원문(줄바꿈·코드펜스)은 파일 경로가 안전하다. */
@@ -212,6 +214,58 @@ async function runLog(ctx: CommandContext): Promise<void> {
   if (event.note) info(`  ${color.dim(event.note)}`);
 }
 
+/**
+ * props 스키마 추출·백필.
+ *
+ * 이 스키마는 문서용이 아니다 — 페이지 조립이 이걸 읽어 실 컴포넌트에 값을 넘긴다. 코드와
+ * 어긋나면 페이지가 없는 prop 을 넘기거나 있는 prop 을 못 채운다. `--check` 로 CI 에서 잡는다.
+ */
+async function runSchema(ctx: CommandContext): Promise<void> {
+  const config = await loadConfig(ctx);
+  const dirs = { elementsDir: config.elementsDir, entriesDir: config.entriesDir };
+  const only = ctx.args.positionals[1];
+  const names = only ? [only] : listEntryNames(dirs);
+  const check = flagBool(ctx.args.flags, "check");
+
+  const results = names.map((name) => computeSchema(config, name));
+  const drifted = results.filter((r) => !r.inSync);
+  const missing = results.filter((r) => !r.found);
+
+  if (!check) {
+    for (const result of drifted) applySchema(config, result);
+  }
+
+  if (flagBool(ctx.args.flags, "json")) {
+    emitJson({
+      checked: results.length,
+      drifted: drifted.map((r) => ({ name: r.name, current: r.current, extracted: r.extracted })),
+      missing: missing.map((r) => r.name),
+      applied: check ? [] : drifted.map((r) => r.name),
+    });
+    process.exitCode = check && drifted.length > 0 ? 1 : 0;
+    return;
+  }
+
+  if (drifted.length === 0) {
+    ok(`${results.length}개 확인 · 스키마가 코드와 일치합니다.`);
+  } else if (check) {
+    warn(`${drifted.length}개가 코드와 어긋납니다 — \`ie element schema\` 로 갱신하세요.`);
+    for (const result of drifted) {
+      info(`  ${color.bold(result.name)}  ${result.current.length}개 → ${result.extracted.length}개`);
+    }
+    process.exitCode = 1;
+  } else {
+    ok(`${drifted.length}개 갱신`);
+    for (const result of drifted) {
+      info(`  ${color.bold(result.name)}  ${result.extracted.map((p) => p.name).join(", ") || "(없음)"}`);
+    }
+  }
+
+  for (const result of missing) {
+    info(`  ${color.dim(`${result.name} — Props 타입을 찾지 못했습니다(추측하지 않습니다).`)}`);
+  }
+}
+
 export const elementCommand = defineCommand({
   name: "element",
   summary: "컴포넌트를 만들고 조회하고 이력을 남긴다",
@@ -223,6 +277,7 @@ export const elementCommand = defineCommand({
     "list         [--category X] [--status draft|stable] [--query 검색어] [--json]",
     "get <name>   엔트리 + 히스토리 + 계약 검사 [--json]",
     "log <name>   --action modified|recommended [--note …] [--prompt-file …] [--sha …]",
+    "schema [name] TS Props 타입에서 props 스키마를 추출해 엔트리에 백필 [--check] [--json]",
   ],
   async run(ctx) {
     const sub = ctx.args.positionals[0];
@@ -235,10 +290,12 @@ export const elementCommand = defineCommand({
         return runGet(ctx);
       case "log":
         return runLog(ctx);
+      case "schema":
+        return runSchema(ctx);
       default:
         throw new CliError(`알 수 없는 하위 명령: ${sub ?? "(없음)"}`, {
           exitCode: 64,
-          hint: "사용 가능: new · list · get · log — `ie help element` 로 상세 도움말.",
+          hint: "사용 가능: new · list · get · log · schema — `ie help element` 로 상세 도움말.",
         });
     }
   },
