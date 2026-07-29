@@ -27,6 +27,16 @@ export interface PageDetail {
   history: PageHistoryEvent[];
 }
 
+export interface FeedbackItem {
+  id: string;
+  nodeId?: string;
+  nodeType?: string;
+  comment: string;
+  components?: string[];
+  at: string;
+  actor: string;
+}
+
 async function get<T>(path: string): Promise<T> {
   const response = await fetch(path, { headers: { accept: "application/json" } });
   if (!response.ok) {
@@ -41,4 +51,47 @@ export function fetchPages(): Promise<{ count: number; pages: PageSummary[] }> {
 
 export function fetchPage(slug: string): Promise<PageDetail> {
   return get(`/api/pages/${encodeURIComponent(slug)}`);
+}
+
+async function send<T>(path: string, method: string, body?: unknown): Promise<T> {
+  const response = await fetch(path, {
+    method,
+    headers: { "content-type": "application/json", accept: "application/json" },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  });
+  if (!response.ok) {
+    const detail = await response.text().catch(() => "");
+    throw new Error(`${path} → HTTP ${response.status} ${detail}`);
+  }
+  return (await response.json()) as T;
+}
+
+const feedbackUrl = (slug: string) => `/api/pages/${encodeURIComponent(slug)}/feedback`;
+
+export function fetchFeedback(slug: string): Promise<{ items: FeedbackItem[] }> {
+  return get(feedbackUrl(slug));
+}
+
+export function addFeedback(
+  slug: string,
+  input: { comment: string; nodeId?: string; nodeType?: string; components?: string[] },
+): Promise<{ items: FeedbackItem[] }> {
+  return send(feedbackUrl(slug), "POST", input);
+}
+
+export function editFeedback(
+  slug: string,
+  id: string,
+  comment: string,
+): Promise<{ items: FeedbackItem[] }> {
+  return send(`${feedbackUrl(slug)}/${encodeURIComponent(id)}`, "PATCH", { comment });
+}
+
+export function deleteFeedback(slug: string, id: string): Promise<{ items: FeedbackItem[] }> {
+  return send(`${feedbackUrl(slug)}/${encodeURIComponent(id)}`, "DELETE");
+}
+
+/** 항목 없이 부르면 전체 삭제 — 반영이 끝난 뒤 한 번에 비운다. */
+export function clearFeedback(slug: string): Promise<{ items: FeedbackItem[] }> {
+  return send(feedbackUrl(slug), "DELETE");
 }

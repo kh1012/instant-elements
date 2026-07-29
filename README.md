@@ -11,6 +11,8 @@
    갤러리에서 본다 (:9221)
         ↓  수정 프롬프트 복사 → 에이전트가 고친다
    기록된다 (누가 · 언제 · 무엇을 · 어떤 커밋)
+        ↓
+   쌓인 컴포넌트로 페이지를 조립한다 → 고칠 자리를 짚으면 반영 프롬프트가 나온다
 ```
 
 ## 상태
@@ -24,7 +26,7 @@ npm install -D instant-elements@alpha
 | 단계 | 내용 | 상태 |
 | --- | --- | --- |
 | Phase 1 | 설정 · CLI · 레지스트리 · 토큰 · 갤러리 · `element-create` 스킬 | ✅ |
-| Phase 2 | 페이지 조립(`page-create`) · 노드 지목 피드백 | 예정 |
+| Phase 2 | 페이지 조립(`page-create`) · 노드 지목 피드백 | ✅ |
 | Phase 3 | 흐름 시연 · git SHA 복원 · 애니메이션 계약 · props 스키마 추출 | 예정 |
 | Phase 4 | 문서 · 예제 앱 · `1.0.0` | 예정 |
 
@@ -75,6 +77,9 @@ npx ie gallery         # http://127.0.0.1:9221
 | `ie element list` | 재사용 후보를 찾는다 (`--query` · `--category` · `--json`) |
 | `ie element get <name>` | 엔트리 + 히스토리 + 계약 검사 |
 | `ie element log <name>` | 수정·추천 이력을 남긴다 (`--sha` 로 복원 지점 기록) |
+| `ie page create "<제목>"` | 빈 페이지를 만든다 |
+| `ie page get/set <slug>` | 페이지를 읽고 저장한다 (`--base` 로 동시성 안전) |
+| `ie page catalog` | 조립 가능한 컴포넌트(데모 보유) |
 | `ie gallery` | 컴포넌트 갤러리를 띄운다 |
 | `ie index` | `index.json` 을 결정적으로 재생성한다 |
 | `ie guide <skill>` | 스킬 정본 절차를 출력한다 |

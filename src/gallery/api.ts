@@ -5,6 +5,8 @@ import { readHistory } from "../registry/history.js";
 import { isValidName } from "../registry/paths.js";
 import { listPages, readPageHistory, tryReadPage } from "../page/store.js";
 import { isValidSlug } from "../page/slug.js";
+import { readGitInfo } from "../cli/project.js";
+import { handlePageFeedback } from "./api-pages.js";
 import { packageVersion } from "../pkg.js";
 
 type Res = Parameters<Connect.NextHandleFunction>[1];
@@ -26,6 +28,8 @@ function json(res: Res, body: unknown, status = 200): void {
  */
 export function ieApi(config: ResolvedConfig): Plugin {
   const dirs = { elementsDir: config.elementsDir, entriesDir: config.entriesDir };
+  // 피드백에 "누가 남겼나"를 남긴다 — 한 포트를 개발자와 검토자가 함께 쓰므로 필요하다.
+  const actor = readGitInfo(config.root).userName ?? "unknown";
 
   return {
     name: "instant-elements:api",
@@ -88,6 +92,9 @@ export function ieApi(config: ResolvedConfig): Plugin {
           }));
           return json(res, { count: pages.length, pages });
         }
+
+        // 피드백은 별도 모듈로 — /api/pages/<slug> 보다 먼저 잡아야 슬러그로 오인하지 않는다.
+        if (handlePageFeedback(req, res, path, config, actor)) return;
 
         if (path.startsWith("/api/pages/") && req.method === "GET") {
           const rest = path.slice("/api/pages/".length);

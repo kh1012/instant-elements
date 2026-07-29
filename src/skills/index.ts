@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { packageRoot } from "../pkg.js";
 
 /** 이 패키지가 배포하는 스킬. 단계가 늘면 여기에 더한다. */
-export const SKILL_NAMES = ["element-create"] as const;
+export const SKILL_NAMES = ["element-create", "page-create"] as const;
 export type SkillName = (typeof SKILL_NAMES)[number];
 
 export function isSkillName(value: string): value is SkillName {

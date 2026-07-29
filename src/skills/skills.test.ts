@@ -60,8 +60,22 @@ describe("배포되는 스킬", () => {
     expect(guide).toContain("--action recommended");
   });
 
+  it("page-create 정본이 동시성 안전 저장을 지시한다 — 덮어쓰기는 남의 편집을 날린다", () => {
+    const guide = readFileSync(join(shippedSkillDir("page-create"), "GUIDE.md"), "utf8");
+    expect(guide).toContain("--base");
+    expect(guide).toContain("종료코드 4");
+    expect(guide).toContain("덮어쓰지 않는다");
+  });
+
+  it("page-create 정본이 컴포넌트를 만들지 말라고 못 박는다 — 경계가 없으면 스킬이 번진다", () => {
+    const guide = readFileSync(join(shippedSkillDir("page-create"), "GUIDE.md"), "utf8");
+    expect(guide).toContain("컴포넌트를 새로 만들지 않는다");
+    expect(guide).toContain("/element-create");
+  });
+
   it("isSkillName 이 목록 밖 이름을 거부한다", () => {
     expect(isSkillName("element-create")).toBe(true);
+    expect(isSkillName("page-create")).toBe(true);
     expect(isSkillName("component-apply")).toBe(false);
     expect(isSkillName("../etc/passwd")).toBe(false);
   });

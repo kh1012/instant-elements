@@ -1,10 +1,19 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import galleryConfig from "virtual:ie/config";
 import { resolveFrame, type FrameId, type PageNode } from "instant-elements/page";
 import { Button } from "../components/Button";
-import { fetchPage } from "../lib/api";
+import {
+  addFeedback,
+  clearFeedback,
+  deleteFeedback,
+  fetchFeedback,
+  fetchPage,
+  type FeedbackItem,
+} from "../lib/api";
 import { cn } from "../lib/cn";
 import { relativeTime } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
+import { FeedbackPanel } from "../page/FeedbackPanel";
 import { FrameToggle, PageFrame } from "../page/PageFrame";
 import { renderNodes } from "../page/PageRender";
 import { PageSketch, type SketchMode } from "../page/PageSketch";
@@ -21,18 +30,54 @@ const MODE_LABEL: Record<ViewMode, string> = {
 /**
  * 페이지 플레이그라운드.
  *
- * 조작이 아니라 **확인**하는 표면이다 — 드래그로 배치하는 편집기는 두지 않는다. 조립은 말로
- * 설명하고(에이전트), 여기서는 결과를 보고 고칠 자리를 짚는다.
+ * 조작이 아니라 **확인하고 지목하는** 표면이다 — 드래그로 배치하는 편집기는 두지 않는다.
+ * 조립은 말로 설명하고(에이전트), 여기서는 결과를 보고 고칠 자리를 짚는다.
  */
 export function PageRoute({ slug }: { slug: string }) {
   const state = useAsync(() => fetchPage(slug), [slug]);
   const [mode, setMode] = useState<ViewMode>("live");
   const [frameOverride, setFrameOverride] = useState<FrameId | null>(null);
-  const [active, setActive] = useState<PageNode | null>(null);
+  const [target, setTarget] = useState<PageNode | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
 
-  if (state.status === "loading") {
-    return <Centered>불러오는 중…</Centered>;
-  }
+  useEffect(() => {
+    let alive = true;
+    void fetchFeedback(slug)
+      .then((result) => {
+        if (alive) setFeedback(result.items);
+      })
+      .catch(() => {
+        if (alive) setFeedback([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [slug]);
+
+  const submit = useCallback(
+    async ({ comment, components }: { comment: string; components: string[] }) => {
+      const result = await addFeedback(slug, {
+        comment,
+        ...(target?.props.id ? { nodeId: target.props.id, nodeType: target.type } : {}),
+        ...(components.length > 0 ? { components } : {}),
+      });
+      setFeedback(result.items);
+    },
+    [slug, target],
+  );
+
+  const remove = useCallback(
+    async (id: string) => {
+      setFeedback((await deleteFeedback(slug, id)).items);
+    },
+    [slug],
+  );
+
+  const clearAll = useCallback(async () => {
+    setFeedback((await clearFeedback(slug)).items);
+  }, [slug]);
+
+  if (state.status === "loading") return <Centered>불러오는 중…</Centered>;
   if (state.status === "error") {
     return (
       <Centered>
@@ -53,9 +98,16 @@ export function PageRoute({ slug }: { slug: string }) {
   const page = state.value;
   // 툴바의 프레임 전환은 저장하지 않는다 — 진실은 페이지 데이터(root.props.pageSize)다.
   const frame = resolveFrame(page.data.root.props["pageSize"], frameOverride);
+  const markedIds = new Set(feedback.map((item) => item.nodeId).filter((id): id is string => Boolean(id)));
+
+  const renderOptions = {
+    onNodeClick: setTarget,
+    activeId: target?.props.id ?? null,
+    markedIds,
+  };
 
   return (
-    <div className="mx-auto max-w-[min(100%,1600px)] px-6 py-8">
+    <div className="mx-auto max-w-[min(100%,1800px)] px-6 py-8">
       <Link to="/pages" className="press text-step-n1 text-st-muted-foreground hover:text-st-foreground">
         ← 페이지
       </Link>
@@ -87,62 +139,51 @@ export function PageRoute({ slug }: { slug: string }) {
               </button>
             ))}
           </div>
-          {mode === "live" ? (
-            <FrameToggle value={frame.id} onChange={setFrameOverride} />
-          ) : null}
+          {mode === "live" ? <FrameToggle value={frame.id} onChange={setFrameOverride} /> : null}
           <Button size="sm" onClick={state.reload}>
             새로고침
           </Button>
         </div>
       </header>
 
-      {page.data.content.length === 0 ? (
-        <div className="mt-6 rounded-lg border border-dashed border-st-border p-12 text-center">
-          <p className="text-step-0 font-medium">아직 비어 있습니다.</p>
-          <p className="mt-2 text-step-n1 text-st-muted-foreground">
-            에이전트에게 이 페이지에 무엇을 놓을지 설명해 보세요.
-          </p>
+      <div className="mt-6 flex flex-col gap-6 xl:flex-row">
+        <div className="min-w-0 flex-1">
+          {page.data.content.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-st-border p-12 text-center">
+              <p className="text-step-0 font-medium">아직 비어 있습니다.</p>
+              <p className="mt-2 text-step-n1 text-st-muted-foreground">
+                에이전트에게 이 페이지에 무엇을 놓을지 설명해 보세요.
+              </p>
+            </div>
+          ) : mode === "live" ? (
+            <PageFrame frame={frame.id}>
+              {renderNodes(page.data.content, "column", renderOptions, true)}
+            </PageFrame>
+          ) : (
+            <div className="rounded-lg border border-st-border bg-st-card p-4">
+              <PageSketch
+                nodes={page.data.content}
+                mode={mode}
+                onNodeClick={setTarget}
+                activeId={target?.props.id ?? null}
+                markedIds={markedIds}
+              />
+            </div>
+          )}
         </div>
-      ) : mode === "live" ? (
-        <div className="mt-6">
-          <PageFrame frame={frame.id}>
-            {renderNodes(page.data.content, "column", { onNodeClick: setActive, activeId: active?.props.id ?? null }, true)}
-          </PageFrame>
-        </div>
-      ) : (
-        <div className="mt-6 rounded-lg border border-st-border bg-st-card p-4">
-          <PageSketch
-            nodes={page.data.content}
-            mode={mode}
-            onNodeClick={setActive}
-            activeId={active?.props.id ?? null}
-          />
-        </div>
-      )}
 
-      {active ? <NodeInfo node={active} onClose={() => setActive(null)} /> : null}
-    </div>
-  );
-}
-
-function NodeInfo({ node, onClose }: { node: PageNode; onClose: () => void }) {
-  return (
-    <aside className="fixed bottom-6 right-6 z-20 w-80 rounded-lg border border-st-border bg-st-card p-4 shadow-lg">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="text-step-n1 font-medium">{node.props._label ?? node.type}</p>
-          <p className="text-step-n2 text-st-muted-foreground">
-            {node.type} · <code>{node.props.id}</code>
-          </p>
-        </div>
-        <Button size="sm" variant="ghost" onClick={onClose}>
-          닫기
-        </Button>
+        <FeedbackPanel
+          page={page}
+          items={feedback}
+          target={target}
+          importAlias={galleryConfig.importAlias}
+          onSubmit={submit}
+          onDelete={remove}
+          onClearAll={clearAll}
+          onClearTarget={() => setTarget(null)}
+        />
       </div>
-      {node.props._role ? (
-        <p className="mt-2 text-step-n2 text-st-muted-foreground">역할 · {node.props._role}</p>
-      ) : null}
-    </aside>
+    </div>
   );
 }
 
