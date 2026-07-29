@@ -55,7 +55,11 @@
     },
     "./theme.css": "./styles/theme.css",
     "./styles/*": "./styles/*",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./page": {
+      "types": "./dist/page.d.ts",
+      "import": "./dist/page.js"
+    }
   },
   "files": [
     "dist",

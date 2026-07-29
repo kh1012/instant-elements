@@ -19,6 +19,19 @@ declare module "virtual:ie/demos" {
   export default demoLoaders;
 }
 
+declare module "virtual:ie/components" {
+  import type { ComponentType } from "react";
+  /**
+   * 컴포넌트 이름 → 본체 모듈 동적 import.
+   * 데모와 달리 **페이지가 지정한 props 를 받는 실 컴포넌트**를 준다.
+   */
+  export const componentLoaders: Record<
+    string,
+    () => Promise<{ default: ComponentType<Record<string, unknown>> }>
+  >;
+  export default componentLoaders;
+}
+
 declare module "virtual:ie/history" {
   import type { HistoryEvent } from "instant-elements/registry";
   export const historyByName: Record<string, HistoryEvent[]>;

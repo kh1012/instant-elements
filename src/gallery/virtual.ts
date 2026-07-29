@@ -26,6 +26,7 @@ import { elementPaths } from "../registry/paths.js";
 export const VIRTUAL_IDS = {
   entries: "virtual:ie/entries",
   demos: "virtual:ie/demos",
+  components: "virtual:ie/components",
   history: "virtual:ie/history",
   config: "virtual:ie/config",
   styles: "virtual:ie/styles.css",
@@ -66,6 +67,43 @@ export function ieVirtual({ config, galleryDir }: VirtualPluginOptions): Plugin 
     }
     lines.push("};", "export default demoLoaders;", "");
     return lines.join("\n");
+  }
+
+  /**
+   * 컴포넌트 본체 지도 — 페이지 렌더가 쓴다.
+   *
+   * 데모와 다르다: 데모는 props 없이 스스로 그려지는 한 컷이고, 이건 **페이지가 지정한 props 를
+   * 받아 그리는 실 컴포넌트**다. 페이지 미리보기가 "리뷰어가 실제 결과를 본다"는 약속을 지키려면
+   * 데모가 아니라 이쪽이 그려져야 한다.
+   *
+   * 모듈에서 어느 export 를 쓸지는 엔트리의 `exportName` 이 정한다 — 못 찾으면 default,
+   * 그것도 없으면 첫 함수 export 로 폴백한다.
+   */
+  function buildComponents(): string {
+    const lines = ["export const componentLoaders = {"];
+    for (const entry of listEntries(dirs)) {
+      const source = elementPaths(dirs, entry.name).component;
+      if (!existsSync(source)) continue;
+      const exportName = entry.meta.exportName ?? "";
+      lines.push(
+        `  ${literal(entry.name)}: () => import(${literal(source)}).then((m) => ({ default: pick(m, ${literal(exportName)}) })),`,
+      );
+    }
+    lines.push("};", "export default componentLoaders;", "");
+
+    // 렌더 가능한 값을 고른다. forwardRef/memo 는 함수가 아니라 객체라 $$typeof 로 판별한다.
+    return [
+      "function pick(mod, exportName) {",
+      "  const named = exportName ? mod[exportName] : undefined;",
+      "  for (const candidate of [named, mod.default, ...Object.values(mod)]) {",
+      '    if (typeof candidate === "function") return candidate;',
+      '    if (candidate && typeof candidate === "object" && "$$typeof" in candidate) return candidate;',
+      "  }",
+      "  return () => null;",
+      "}",
+      "",
+      ...lines,
+    ].join("\n");
   }
 
   function buildHistory(): string {
@@ -136,6 +174,7 @@ export function ieVirtual({ config, galleryDir }: VirtualPluginOptions): Plugin 
   const builders: Record<string, () => string> = {
     [`${RESOLVED_PREFIX}${VIRTUAL_IDS.entries}`]: buildEntries,
     [`${RESOLVED_PREFIX}${VIRTUAL_IDS.demos}`]: buildDemos,
+    [`${RESOLVED_PREFIX}${VIRTUAL_IDS.components}`]: buildComponents,
     [`${RESOLVED_PREFIX}${VIRTUAL_IDS.history}`]: buildHistory,
     [`${RESOLVED_PREFIX}${VIRTUAL_IDS.config}`]: buildConfig,
     [stylesModuleId]: buildStyles,
@@ -177,11 +216,12 @@ export function ieVirtual({ config, galleryDir }: VirtualPluginOptions): Plugin 
           touched.push(
             file.endsWith(".history.jsonl") ? VIRTUAL_IDS.history : VIRTUAL_IDS.entries,
           );
-          // 엔트리가 늘고 줄면 데모 지도도 함께 바뀐다.
-          if (file.endsWith(".json")) touched.push(VIRTUAL_IDS.demos);
+          // 엔트리가 늘고 줄면 데모·컴포넌트 지도도 함께 바뀐다.
+          if (file.endsWith(".json")) touched.push(VIRTUAL_IDS.demos, VIRTUAL_IDS.components);
         }
-        if (file.startsWith(config.elementsDir) && file.endsWith(".demo.tsx")) {
-          touched.push(VIRTUAL_IDS.demos);
+        if (file.startsWith(config.elementsDir)) {
+          if (file.endsWith(".demo.tsx")) touched.push(VIRTUAL_IDS.demos);
+          else if (file.endsWith(".tsx")) touched.push(VIRTUAL_IDS.components);
         }
         if (file === config.tokens.css) touched.push(VIRTUAL_IDS.styles);
 

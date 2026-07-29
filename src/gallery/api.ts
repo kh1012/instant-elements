@@ -3,6 +3,8 @@ import type { ResolvedConfig } from "../config/types.js";
 import { listEntryNames, tryReadEntry } from "../registry/entry.js";
 import { readHistory } from "../registry/history.js";
 import { isValidName } from "../registry/paths.js";
+import { listPages, readPageHistory, tryReadPage } from "../page/store.js";
+import { isValidSlug } from "../page/slug.js";
 import { packageVersion } from "../pkg.js";
 
 type Res = Parameters<Connect.NextHandleFunction>[1];
@@ -69,6 +71,41 @@ export function ieApi(config: ResolvedConfig): Plugin {
           const name = decodeURIComponent(path.slice("/api/history/".length));
           if (!isValidName(name)) return json(res, { error: "invalid name" }, 400);
           return json(res, { name, events: readHistory(dirs, name) });
+        }
+
+        // ── 페이지
+        //
+        // 가상 모듈이 아니라 API 로 제공한다. 페이지는 갤러리가 떠 있는 동안 CLI 가 계속 고치는
+        // 데이터라, 모듈 무효화보다 필요할 때 다시 가져오는 편이 단순하고 어긋날 여지가 적다.
+        if (path === "/api/pages" && req.method === "GET") {
+          const pages = listPages(config.pagesDir).map((page) => ({
+            slug: page.slug,
+            title: page.title,
+            version: page.version,
+            updatedAt: page.updatedAt,
+            updatedBy: page.updatedBy,
+            nodes: page.data.content.length,
+          }));
+          return json(res, { count: pages.length, pages });
+        }
+
+        if (path.startsWith("/api/pages/") && req.method === "GET") {
+          const rest = path.slice("/api/pages/".length);
+          const slug = decodeURIComponent(rest);
+          if (!isValidSlug(slug)) return json(res, { error: "invalid slug" }, 400);
+
+          const page = tryReadPage(config.pagesDir, slug);
+          if (!page) return json(res, { slug, exists: false }, 404);
+          return json(res, {
+            slug,
+            exists: true,
+            version: page.version,
+            title: page.title,
+            updatedAt: page.updatedAt,
+            updatedBy: page.updatedBy,
+            data: page.data,
+            history: readPageHistory(config.pagesDir, slug),
+          });
         }
 
         return json(res, { error: "not found" }, 404);

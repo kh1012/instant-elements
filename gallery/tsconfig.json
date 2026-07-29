@@ -22,7 +22,8 @@
 
     // 계약(schema.ts)만 가리킨다 — 레지스트리 배럴은 node:fs 를 끌어와 브라우저 설정에서 검사할 수 없다.
     "paths": {
-      "instant-elements/registry": ["../src/registry/schema.ts"]
+      "instant-elements/registry": ["../src/registry/schema.ts"],
+      "instant-elements/page": ["../src/page/schema.ts"]
     }
   },
   "include": ["src"]
