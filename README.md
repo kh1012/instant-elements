@@ -1,107 +1,100 @@
 # instant-elements
 
-> 코딩 에이전트 기반 UI 하네스 — **설명하면 만들어지고, 갤러리에서 보이고, 수정 프롬프트로 고쳐지고, 모든 변경이 기록된다.**
+> **Describe it, and it gets built — visible in a gallery, refined by prompt, and every change recorded.**
 
-컴포넌트를 만들 때마다 레지스트리에 쌓이고, 다음 요청에서는 **새로 만들기 전에 이미 있는 것을 먼저 추천**한다. 디자인 일관성은 시맨틱 토큰(`st-*`)이 지킨다.
+A UI harness for coding agents. Components accumulate in a registry as you build, so the next request starts by **finding what already exists** instead of making another near-duplicate. Semantic tokens keep the whole thing visually coherent.
 
 ```
-"대시보드에 쓸 지표 카드 만들어줘"
-        ↓  에이전트가 재사용을 먼저 찾는다
-        ↓  없으면 3파일 + 레지스트리 엔트리를 만든다
-   갤러리에서 본다 (:9221)
-        ↓  수정 프롬프트 복사 → 에이전트가 고친다
-   기록된다 (누가 · 언제 · 무엇을 · 어떤 커밋)
+"a stat card for the dashboard header"
+        ↓  the agent looks for something reusable first
+        ↓  if nothing fits: three files + a registry entry
+   you look at it in the gallery
+        ↓  copy the modify prompt → the agent edits it
+   it gets recorded (who · when · what · which commit)
         ↓
-   쌓인 컴포넌트로 페이지를 조립한다 → 고칠 자리를 짚으면 반영 프롬프트가 나온다
+   assemble pages from what you've built → point at what to fix
         ↓
-   페이지를 이어 붙여 실제 서비스처럼 넘기며 시연한다
+   chain pages into a click-through demo
 ```
 
-## 상태
+## Why
 
-🚧 **알파 개발 중** — 단계적으로 공개됩니다. 진행 중인 빌드는 `alpha` 태그로 받습니다.
+Design systems drift for a boring reason: when finding the existing button is harder than writing a new one, people write a new one. Six months later there are nine buttons and no one knows which is canonical.
+
+instant-elements makes reuse the path of least resistance — the agent searches the registry before writing anything — and makes each component's history legible: what was asked for, what changed, and which commit to go back to.
+
+## Requirements
+
+- Node.js **20.11+**
+- React 18/19 and Tailwind CSS v4 in your project
+- git (optional — history authorship and restore points come from it)
+
+## Getting started
 
 ```bash
-npm install -D instant-elements@alpha
+npm install -D instant-elements
+
+npx ie init            # config, directories, cn helper
+npx ie skills install  # skills into .claude/skills and .agents/skills
 ```
 
-| 단계 | 내용 | 상태 |
-| --- | --- | --- |
-| Phase 1 | 설정 · CLI · 레지스트리 · 토큰 · 갤러리 · `element-create` 스킬 | ✅ |
-| Phase 2 | 페이지 조립(`page-create`) · 노드 지목 피드백 | ✅ |
-| Phase 3 | 흐름 시연 · git SHA 복원 · 애니메이션 계약 · props 스키마 추출 | ✅ |
-| Phase 4 | 문서 · 예제 앱 · `1.0.0` | 예정 |
-
-## 요구 사항
-
-- Node.js **20.11** 이상
-- React 18/19 · Tailwind CSS v4 (소비 프로젝트)
-- git (선택 — 히스토리 작성자와 복원 지점이 여기서 옵니다)
-
-## 시작하기
-
-```bash
-npx ie init            # 설정·디렉토리·유틸 스캐폴드
-npx ie skills install  # 코딩 에이전트에 스킬 설치
-```
-
-`init` 이 안내하는 대로 Tailwind 진입 CSS 에 토큰을 연결하고:
+Wire the tokens into your Tailwind entry CSS:
 
 ```css
 @import "tailwindcss";
 @import "instant-elements/theme.css";
-@source "./src/elements";
+@source "./elements";   /* so utilities get generated for your components */
 ```
 
-앱 루트에 스코프 속성을 붙입니다:
+Scope the base layer on your root element:
 
 ```html
 <html data-instant data-theme="light">
 ```
 
-이제 에이전트에게 말로 시키면 됩니다:
+Now describe what you need to your agent:
 
-> "대시보드 상단에 쓸 지표 카드 만들어줘. 숫자랑 증감률 같이 보이게."
+> "A stat card for the dashboard header — a number with its change from last month."
 
-그리고 결과를 봅니다:
+And look at the result:
 
 ```bash
 npx ie gallery         # http://127.0.0.1:9221
 ```
 
-## 명령
+There is a working consumer project in [`examples/vite-react`](./examples/vite-react).
 
-| 명령 | 하는 일 |
+## Commands
+
+| Command | What it does |
 | --- | --- |
-| `ie init` | 설정·디렉토리·`cn` 유틸·빈 인덱스를 만든다 |
-| `ie skills install` | `.claude/skills` · `.agents/skills` 에 스킬 스텁을 설치한다 |
-| `ie element new <name>` | 3파일 + 엔트리 + 생성 이력 + 인덱스를 한 번에 만든다 |
-| `ie element list` | 재사용 후보를 찾는다 (`--query` · `--category` · `--json`) |
-| `ie element get <name>` | 엔트리 + 히스토리 + 계약 검사 |
-| `ie element log <name>` | 수정·추천 이력을 남긴다 (`--sha` 로 복원 지점 기록) |
-| `ie page create "<제목>"` | 빈 페이지를 만든다 |
-| `ie page get/set <slug>` | 페이지를 읽고 저장한다 (`--base` 로 동시성 안전) |
-| `ie page catalog` | 조립 가능한 컴포넌트(데모 보유) |
-| `ie element schema` | TS Props 타입에서 props 스키마를 추출·백필 (`--check`) |
-| `ie element validate` | 하드룰 검증 게이트 (`--animation-strict`) |
-| `ie element restore` | 과거 커밋 시점으로 되돌린다 (`--to <sha>`) |
-| `ie flow create/add/link/check` | 페이지를 이어 화면 전환을 시연한다 |
-| `ie gallery` | 컴포넌트 갤러리를 띄운다 |
-| `ie index` | `index.json` 을 결정적으로 재생성한다 |
-| `ie guide <skill>` | 스킬 정본 절차를 출력한다 |
-| `ie config` | 해석된 설정과 경로 (`--json`) |
-| `ie doctor` | 환경·프로젝트 점검 |
+| `ie init` | Scaffolds config, directories, the `cn` helper, an empty index |
+| `ie skills install` | Installs skill stubs for Claude Code and Codex |
+| `ie element new <name>` | Three files + entry + creation history + index, in one step |
+| `ie element list` | Finds reuse candidates (`--query`, `--category`, `--json`) |
+| `ie element get <name>` | Entry, history, and contract check |
+| `ie element log <name>` | Records an edit or a reuse recommendation (`--sha` marks a restore point) |
+| `ie element schema` | Extracts props from your TS types into the entry (`--check` for CI) |
+| `ie element validate` | Hard-rule gate (`--animation-strict`) |
+| `ie element restore <name>` | Rolls a component back to a past commit (`--to <sha>`) |
+| `ie page create/get/set` | Page assembly with optimistic concurrency |
+| `ie page catalog` | Components that can actually render inside a page |
+| `ie flow create/add/link/check` | Chain pages into a click-through demo |
+| `ie gallery` | Runs the gallery |
+| `ie index` | Regenerates `index.json` deterministically |
+| `ie guide <skill>` | Prints the canonical procedure for a skill |
+| `ie config` / `ie doctor` | Resolved paths / environment check |
 
-## 설정
+## Configuration
 
 ```ts
 // instant.config.ts
 import type { InstantElementsConfig } from "instant-elements/config";
 
 const config: InstantElementsConfig = {
-  elementsDir: "src/elements",       // 컴포넌트 3파일이 사는 곳
-  importAlias: "@/elements",         // 앱에서 import 하는 경로
-  registryDir: ".instant/registry",  // 엔트리 · 인덱스 · 히스토리
+  elementsDir: "src/elements",       // where generated components live
+  importAlias: "@/elements",         // how your app imports them
+  registryDir: ".instant/registry",  // entries, index, history
   pagesDir: ".instant/pages",
   flowsDir: ".instant/flows",
   tokens: { css: "instant-elements/theme.css" },
@@ -111,17 +104,26 @@ const config: InstantElementsConfig = {
 export default config;
 ```
 
-경로는 전부 설정에서 나옵니다 — CLI도 갤러리도 스킬도 경로를 하드코딩하지 않고 `ie config --json` 이 내놓는 해석된 절대경로만 봅니다.
+Every path comes from here. The CLI, the gallery, and the skills all read `ie config --json` rather than hardcoding anything — which is what lets the same skill instructions work in any project layout.
 
-**우리 디자인 시스템 토큰을 쓰려면** `styles/colors.css` 를 복사해 값만 바꾸고 `tokens.css` 를 그 파일로 가리키세요. 토큰 **이름**은 그대로 두어야 갤러리와 기존 컴포넌트가 계속 동작합니다.
+**To use your own design tokens**, copy `styles/colors.css`, change the values, and point `tokens.css` at your copy. Keep the token *names* — the gallery and your existing components depend on them.
 
-## 설계 메모
+## How it works
 
-- **갤러리는 소비 프로젝트의 컴포넌트 라이브러리에 의존하지 않습니다.** 도구가 자기 힘으로 떠야 "컴포넌트가 깨져서 컴포넌트를 못 보는" 순환이 생기지 않습니다.
-- **레지스트리 인덱스는 결정적입니다.** 같은 엔트리면 출력이 바이트 단위로 같아, 재생성만으로 diff 가 나지 않습니다.
-- **히스토리는 append-only 입니다.** 여러 writer 가 동시에 써도 라인이 섞이지 않습니다.
-- **스킬 정본은 패키지 안에 하나뿐입니다.** 설치되는 건 스텁이고, 절차는 `ie guide` 로 매번 새로 읽습니다 — `npm update` 가 곧 지침 갱신입니다. 팀 규칙을 덧붙이려면 `.instant/skills/<name>/GUIDE.md` 를 두세요.
+**Three files per component.** The component, a demo that renders itself with no props (this is what the gallery card draws), and a barrel. No Storybook required — the gallery detail page is the workbench.
 
-## 라이선스
+**The registry is the source of truth.** One JSON entry per component holds the intent (the original request, preserved verbatim), a plain-language summary, keywords, and the props schema. `index.json` is a deterministic rollup: the same entries always produce byte-identical output, so regenerating never creates a diff.
+
+**History is append-only.** Creation, edits, and reuse recommendations each append one line. Recommendations matter — without them you cannot measure whether the harness is actually preventing duplicates, which is the entire point of it.
+
+**Skills route to one canonical guide.** What gets installed is a thin stub; the procedure is read fresh from the package on every invocation, so `npm update` is how you update your team's instructions. Drop a `.instant/skills/<name>/GUIDE.md` in your project to add your own rules on top.
+
+**The gallery depends on nothing you wrote.** It reads the registry and lazily imports your demos, but its own chrome is self-contained — otherwise a broken component would break the tool you use to look at broken components.
+
+**Pages are data, not code.** Agents assemble them; reviewers click on what needs fixing; the collected feedback becomes one prompt that already carries the page structure, node paths, and save procedure. Saves are version-guarded — hand back the version you read as `--base`, or the save is rejected rather than silently overwriting someone else's edit.
+
+**Animation support is declared, never inferred.** A component states which of its parts can host an effect and what those parts can do; an effect states what it needs. Guessing from DOM selectors breaks silently the moment markup changes or something renders through a portal.
+
+## License
 
 MIT © kh1012

@@ -1,0 +1,5 @@
+@import "tailwindcss";
+@import "instant-elements/theme.css";
+
+/* 생성된 컴포넌트의 클래스도 스캔 대상에 넣는다 — 안 넣으면 유틸이 만들어지지 않는다. */
+@source "./elements";

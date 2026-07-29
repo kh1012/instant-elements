@@ -5,7 +5,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "description": "Coding-agent driven UI harness — describe it, an agent builds it, the gallery shows it, every change is recorded.",
+  "description": "A UI harness for coding agents — describe it, an agent builds it, the gallery shows it, every change is recorded.",
   "keywords": [
     "ui",
     "instant",
