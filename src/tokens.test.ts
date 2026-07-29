@@ -22,9 +22,15 @@ function exposedColorTokens(css: string): Set<string> {
   return new Set([...css.matchAll(/--color-st-([a-z0-9-]+)\s*:/g)].map((m) => m[1] as string));
 }
 
-/** 특정 셀렉터 블록 안에서 정의된 `--st-<name>` 이름들. */
+/**
+ * 특정 셀렉터 블록 안에서 정의된 `--st-<name>` 이름들.
+ *
+ * 셀렉터 뒤에 여는 중괄호가 바로 오는 자리만 찾는다 — 단순 indexOf 로는 문서 주석 안에 적힌
+ * 같은 셀렉터 문자열에 먼저 걸려 엉뚱한 블록을 읽는다(실제로 겪었다).
+ */
 function definedInBlock(css: string, selector: string): Set<string> {
-  const start = css.indexOf(selector);
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const start = new RegExp(`${escaped}\\s*\\{`).exec(css)?.index ?? -1;
   if (start < 0) return new Set();
   const open = css.indexOf("{", start);
   let depth = 0;
@@ -64,9 +70,17 @@ describe("토큰 매니페스트 ↔ CSS 정합", () => {
 });
 
 describe("라이트/다크 대칭", () => {
-  const light = definedInBlock(colorsCss, ":root {");
-  const dark = definedInBlock(colorsCss, '[data-theme="dark"] {');
-  const autoDark = definedInBlock(colorsCss, ':root:not([data-theme="light"])');
+  const light = definedInBlock(colorsCss, ":root");
+  const dark = definedInBlock(colorsCss, '[data-theme="dark"]');
+  const autoDark = definedInBlock(colorsCss, ":root:not([data-theme])");
+
+  it("OS 추종 다크는 속성의 '부재'를 조건으로 삼는다 — 명시 지정과 겹치면 안 된다", () => {
+    // `:not([data-theme="light"])` 로 쓰면 data-theme="dark" 일 때 두 규칙이 동시에 매치되고
+    // specificity 가 (0,2,0) > (0,1,0) 이라 OS 규칙이 명시 지정을 이긴다 → 소비자가 다크 토큰을
+    // 덮어쓸 수 없게 된다. 속성 부재를 조건으로 삼아야 세 규칙이 배타적이 된다.
+    expect(colorsCss).toContain(":root:not([data-theme])");
+    expect(colorsCss).not.toContain(':root:not([data-theme="light"])');
+  });
 
   it("라이트에서 정의한 토큰을 다크도 전부 정의한다", () => {
     const missing = [...light].filter((name) => !dark.has(name)).sort();

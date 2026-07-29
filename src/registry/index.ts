@@ -1,5 +1,7 @@
 /** 레지스트리 공개 표면. CLI·갤러리·검증이 전부 여기를 통해 레지스트리를 다룬다. */
 export type {
+  ElementCategory,
+  ElementStatus,
   Entry,
   EntryFile,
   EntryMeta,

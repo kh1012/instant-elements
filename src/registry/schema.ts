@@ -1,5 +1,8 @@
 import type { ElementCategory, ElementStatus } from "../config/types.js";
 
+// 엔트리 계약의 일부이므로 여기서 함께 내보낸다 — 소비자가 설정 모듈까지 알 필요는 없다.
+export type { ElementCategory, ElementStatus } from "../config/types.js";
+
 /**
  * 레지스트리 엔트리 — 컴포넌트 하나에 대한 **단일 진실**.
  *

@@ -5,6 +5,43 @@
  * 토큰(st-*)은 가상 모듈이 앞에 붙여 준다.
  */
 
+/*
+ * ── 갤러리 크롬 중립화 (갤러리 전용 override)
+ *
+ * 크롬이 파란 끼를 띠면 그 안에 놓인 **프리뷰 컴포넌트의 실제 색**을 판단하기 어려워진다.
+ * 그래서 갤러리 자신의 강조 계열은 색상 대신 **밝기만으로 위계**를 만든다.
+ *
+ * 상태색(destructive·success·warning)과 chart 팔레트는 그대로 둔다 — 빨강/초록/주황은 색 자체가
+ * 뜻을 나르므로 회색이 되면 "위험"과 "완료"가 같은 것으로 읽힌다.
+ *
+ * 이건 **갤러리 화면에만** 걸리는 덮어쓰기다. 라이브러리가 배포하는 styles/colors.css 는
+ * 손대지 않으므로 소비 프로젝트의 디자인 시스템에는 아무 영향이 없다.
+ *
+ * 셀렉터를 [data-theme=…] 로 잡는 이유: colors.css 의 라이트 값은 `:root` 에 있어 `:root` 로
+ * 덮으면 specificity 가 같아 순서에 기대야 하고, 다크 값은 [data-theme="dark"] 라 `:root` 로는
+ * 아예 못 이긴다. 갤러리는 첫 페인트 전에 data-theme 를 항상 확정하므로 이 두 블록이면 충분하다.
+ *
+ * _근거: 상류 하네스 eb15b2428 — 유채색 토큰 실측 후 파란 계열만 중립화._
+ */
+[data-theme="light"] {
+  /* 라이트에서 강조는 가장 어두운 회색이다. */
+  --st-primary: oklch(0.25 0 0);
+  --st-primary-foreground: oklch(0.985 0 0);
+  --st-info: oklch(0.45 0 0);
+  /* 색상 대비를 못 쓰는 만큼 명도를 더 벌려 표면 대비 3:1 을 넘긴다(WCAG 1.4.11). */
+  --st-ring: oklch(0.45 0 0);
+  --st-sidebar-ring: var(--st-ring);
+}
+
+[data-theme="dark"] {
+  /* 다크에서 위계는 밝을수록 앞이다 — 면이 밝아지므로 그 위 글자는 반대로 어두워야 읽힌다. */
+  --st-primary: oklch(0.95 0 0);
+  --st-primary-foreground: oklch(0.205 0 0);
+  --st-info: oklch(0.75 0 0);
+  --st-ring: oklch(0.72 0 0);
+  --st-sidebar-ring: var(--st-ring);
+}
+
 html,
 body,
 #root {
@@ -43,6 +80,58 @@ body {
 
 .anim-fade-up {
   animation: ie-fade-up 0.42s var(--ease-smooth) both;
+}
+
+/*
+ * 코드블록 신택스 팔레트 — 갤러리 전용.
+ *
+ * st-chart-* 는 전부 파랑 계열이라 코드 하이라이팅에는 서로 구분이 안 된다. 그래서 신택스만
+ * 별도 팔레트를 둔다. 라이트에서는 채도를 올리고 명도를 낮춰 흰 배경에서도 또렷하게 한다.
+ */
+:root {
+  --tok-kw: oklch(0.48 0.22 300);
+  --tok-str: oklch(0.5 0.15 155);
+  --tok-tag: oklch(0.52 0.2 25);
+  --tok-comp: oklch(0.5 0.14 235);
+  --tok-num: oklch(0.55 0.15 55);
+}
+
+[data-theme="dark"] {
+  --tok-kw: oklch(0.76 0.14 300);
+  --tok-str: oklch(0.8 0.13 155);
+  --tok-tag: oklch(0.76 0.16 25);
+  --tok-comp: oklch(0.83 0.11 210);
+  --tok-num: oklch(0.83 0.12 60);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --tok-kw: oklch(0.76 0.14 300);
+    --tok-str: oklch(0.8 0.13 155);
+    --tok-tag: oklch(0.76 0.16 25);
+    --tok-comp: oklch(0.83 0.11 210);
+    --tok-num: oklch(0.83 0.12 60);
+  }
+}
+
+.tok-kw {
+  color: var(--tok-kw);
+}
+.tok-str {
+  color: var(--tok-str);
+}
+.tok-tag {
+  color: var(--tok-tag);
+}
+.tok-comp {
+  color: var(--tok-comp);
+}
+.tok-num {
+  color: var(--tok-num);
+}
+.tok-com {
+  color: var(--st-muted-foreground);
+  font-style: italic;
 }
 
 /*
