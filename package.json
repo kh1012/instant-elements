@@ -1,16 +1,23 @@
 {
   "name": "instant-elements",
   "version": "0.0.1",
+  "type": "module",
   "publishConfig": {
     "access": "public"
   },
-  "description": "Instant UI elements — build interfaces on the fly.",
+  "description": "Coding-agent driven UI harness — describe it, an agent builds it, the gallery shows it, every change is recorded.",
   "keywords": [
     "ui",
     "instant",
     "elements",
     "components",
-    "interface"
+    "interface",
+    "design-system",
+    "design-tokens",
+    "gallery",
+    "claude-code",
+    "coding-agent",
+    "ai"
   ],
   "license": "MIT",
   "author": "kh1012",
@@ -22,7 +29,41 @@
   "bugs": {
     "url": "https://github.com/kh1012/instant-elements/issues"
   },
+  "engines": {
+    "node": ">=20.11"
+  },
+  "bin": {
+    "ie": "./dist/cli.js",
+    "instant-elements": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./config": {
+      "types": "./dist/config.d.ts",
+      "import": "./dist/config.js"
+    },
+    "./package.json": "./package.json"
+  },
   "files": [
-    "README.md"
-  ]
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.4"
+  }
 }

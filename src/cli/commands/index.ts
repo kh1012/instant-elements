@@ -1,0 +1,7 @@
+import type { Command } from "../command.js";
+import { doctorCommand } from "./doctor.js";
+
+/** 등록 순서가 곧 도움말 표시 순서다. */
+export const commands: Command[] = [doctorCommand];
+
+export const commandByName = new Map(commands.map((c) => [c.name, c]));
