@@ -5,6 +5,7 @@ import type { ElementCategory } from "instant-elements/registry";
 import { ComponentCard } from "../components/ComponentCard";
 import { cn } from "../lib/cn";
 import { searchEntries, sortEntries, type SortKey } from "../lib/search";
+import { partitionByPin, usePins } from "../lib/pins";
 import { navigate, useQuery } from "../router";
 
 const CATEGORY_FILTERS: (ElementCategory | "all")[] = ["all", "Composite", "Animations", "System"];
@@ -26,6 +27,7 @@ function setParam(params: URLSearchParams, key: string, value: string | null): v
 
 export function LibraryRoute() {
   const params = useQuery();
+  const pins = usePins();
   const [query, setQuery] = useState(() => params.get("q") ?? "");
 
   const category = params.get("category") ?? "all";
@@ -36,6 +38,11 @@ export function LibraryRoute() {
       category === "all" ? entries : entries.filter((e) => e.meta.category === category);
     return sortEntries(searchEntries(byCategory, query), sort);
   }, [category, query, sort]);
+
+  const { pinned: pinnedItems, rest: restItems } = useMemo(
+    () => partitionByPin(filtered, pins, (entry) => entry.name),
+    [filtered, pins],
+  );
 
   const counts = useMemo(() => {
     const map = new Map<string, number>([["all", entries.length]]);
@@ -114,10 +121,38 @@ export function LibraryRoute() {
       {filtered.length === 0 ? (
         <EmptyState hasEntries={entries.length > 0} importAlias={galleryConfig.importAlias} />
       ) : (
-        <div className="anim-fade-up mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((entry) => (
-            <ComponentCard key={entry.name} entry={entry} />
-          ))}
+        <div className="anim-fade-up mt-6 flex flex-col gap-8">
+          {/*
+            고정된 것을 위로 올리고 아래 목록에서는 뺀다 — 같은 카드가 두 번 나오면
+            "고정됨"이 별도 구획이 아니라 그냥 중복으로 읽힌다.
+          */}
+          {pinnedItems.length > 0 ? (
+            <section>
+              <h2 className="mb-3 text-step-n1 font-medium text-st-muted-foreground">
+                고정됨 <span className="opacity-70">{pinnedItems.length}</span>
+              </h2>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {pinnedItems.map((entry) => (
+                  <ComponentCard key={entry.name} entry={entry} pinned />
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {restItems.length > 0 ? (
+            <section>
+              {pinnedItems.length > 0 ? (
+                <h2 className="mb-3 text-step-n1 font-medium text-st-muted-foreground">
+                  전체 <span className="opacity-70">{restItems.length}</span>
+                </h2>
+              ) : null}
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {restItems.map((entry) => (
+                  <ComponentCard key={entry.name} entry={entry} />
+                ))}
+              </div>
+            </section>
+          ) : null}
         </div>
       )}
     </div>

@@ -8,7 +8,10 @@ import { DemoFrame } from "../components/DemoFrame";
 import { SafePreview } from "../components/SafePreview";
 import { CategoryBadge, StatusBadge } from "../components/StatusBadge";
 import { formatAt, relativeTime } from "../lib/format";
-import { CopyIcon, SplitIcon, WandIcon } from "../components/icons";
+import { CopyIcon, SplitIcon, StarIcon, WandIcon } from "../components/icons";
+import { Tooltip } from "../components/Tooltip";
+import { togglePin, usePins } from "../lib/pins";
+import { cn } from "../lib/cn";
 import {
   buildIntegrationPrompt,
   buildModifyPrompt,
@@ -27,8 +30,10 @@ const ACTION_LABEL: Record<HistoryEvent["action"], string> = {
 };
 
 export function DetailRoute({ name }: { name: string }) {
+  const pins = usePins();
   const entry = entries.find((e) => e.name === name);
   if (!entry) return <NotFound name={name} />;
+  const pinned = pins.includes(entry.name);
 
   const ctx: PromptContext = {
     importAlias: galleryConfig.importAlias,
@@ -63,7 +68,26 @@ export function DetailRoute({ name }: { name: string }) {
           툴팁에는 이름이 아니라 **용도**를 적는다 — 이름만으로는 무엇이 다른지 여전히 모른다.
           _근거: 상류 하네스 23f4ff6b0 · 5a5b5098b._
         */}
-        <div className="flex items-center gap-0.5 rounded-md border border-st-border bg-st-card p-0.5">
+        <div className="flex items-center gap-2">
+          <Tooltip content={pinned ? "고정 해제" : "자주 쓰는 것으로 고정"}>
+            <button
+              type="button"
+              aria-label={pinned ? "고정 해제" : "고정"}
+              aria-pressed={pinned}
+              onClick={() => togglePin(entry.name)}
+              className={cn(
+                "press inline-flex h-9 w-9 items-center justify-center rounded-md",
+                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-st-ring",
+                pinned
+                  ? "text-st-warning"
+                  : "text-st-muted-foreground hover:bg-st-button-ghost-hover-bg",
+              )}
+            >
+              <StarIcon filled={pinned} />
+            </button>
+          </Tooltip>
+
+          <div className="flex items-center gap-0.5 rounded-md border border-st-border bg-st-card p-0.5">
           <CopyButton
             icon={<CopyIcon />}
             label="통합 프롬프트 복사"
@@ -85,6 +109,7 @@ export function DetailRoute({ name }: { name: string }) {
             tooltip="너무 커진 이 컴포넌트를 조각으로 쪼개 다시 조립하라고 시킨다"
             text={buildSplitPrompt(entry, ctx)}
           />
+          </div>
         </div>
       </header>
 

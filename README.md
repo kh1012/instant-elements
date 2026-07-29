@@ -78,8 +78,11 @@ There is a working consumer project in [`examples/vite-react`](./examples/vite-r
 | `ie element validate` | Hard-rule gate (`--animation-strict`) |
 | `ie element restore <name>` | Rolls a component back to a past commit (`--to <sha>`) |
 | `ie page create/get/set` | Page assembly with optimistic concurrency |
-| `ie page catalog` | Components that can actually render inside a page |
-| `ie flow create/add/link/check` | Chain pages into a click-through demo |
+| `ie page check <slug>` | Structural check — unique ids, `items`, known components |
+| `ie page catalog` | Components that can render in a page, with their props schema |
+| `ie flow create/add/link` | Chain pages into a click-through demo |
+| `ie flow check <flow>` | Flow integrity **plus** the structure of every screen it uses |
+| `ie gallery status [name]` | Confirms the gallery on that port is *yours* before trusting a link |
 | `ie gallery` | Runs the gallery |
 | `ie index` | Regenerates `index.json` deterministically |
 | `ie guide <skill>` | Prints the canonical procedure for a skill |
@@ -118,9 +121,30 @@ Every path comes from here. The CLI, the gallery, and the skills all read `ie co
 
 **Skills route to one canonical guide.** What gets installed is a thin stub; the procedure is read fresh from the package on every invocation, so `npm update` is how you update your team's instructions. Drop a `.instant/skills/<name>/GUIDE.md` in your project to add your own rules on top.
 
+**Pinning is per-browser, on purpose.** Frequently used components can be starred to a "pinned" section at the top of the library. That set lives in `localStorage`, not the registry — pins are *your current working set*, and committing them would put one person's shortlist above everyone else's list.
+
 **The gallery depends on nothing you wrote.** It reads the registry and lazily imports your demos, but its own chrome is self-contained — otherwise a broken component would break the tool you use to look at broken components.
 
-**Pages are data, not code.** Agents assemble them; reviewers click on what needs fixing; the collected feedback becomes one prompt that already carries the page structure, node paths, and save procedure. Saves are version-guarded — hand back the version you read as `--base`, or the save is rejected rather than silently overwriting someone else's edit.
+**A link is only "verified" after `ie gallery status`.** The gallery is a SPA, so the server returns 200 for any path — and if another project's gallery holds that port, asking it about your component can return a confident yes about *theirs*. Common names like `button` make this likely rather than rare. So identity is checked first, the entry second.
+
+**Three prompts, one axis.** Each component's detail page offers three ways to hand it to an agent, differing in what comes out the other end:
+
+| | What it asks for | What changes |
+| --- | --- | --- |
+| **Integrate** | use this component in another screen | the consuming screen |
+| **Modify** | change this component itself | the component |
+| **Split** | break it into pieces and reassemble | new piece entries; the original becomes a composite |
+
+Split is the one worth explaining. When a component has grown to hold too many responsibilities, splitting it creates real entries for the pieces and rewrites the original as an assembly of them — so the original's `composedOf` and history record that it stopped being a single thing. Without that hierarchy the gallery still shows one component and the relationship disappears. The prompt also says when *not* to: a piece used only by its parent, with no reuse in sight, just adds files.
+
+**Pages are data, not code.** Agents assemble them; reviewers click on what needs fixing; the collected feedback becomes one prompt that already carries the page structure, node paths, and save procedure.
+
+Two things are enforced rather than merely documented, because both fail *quietly*:
+
+- **Structure.** `ie page set` refuses to save a page with missing or duplicate node ids, children placed anywhere but `items`, or component names that aren't in the registry. Each of those saves fine and then renders wrong — you'd find out by looking.
+- **Concurrency.** Hand back the version you read as `--base`, or the save is rejected rather than silently overwriting someone else's edit.
+
+`ie flow check` runs the page check on every screen the flow uses. A flow is only as correct as the pages it points at — and duplicate ids are invisible from the flow's side, since the id it targets does exist, just twice.
 
 **Animation support is declared, never inferred.** A component states which of its parts can host an effect and what those parts can do; an effect states what it needs. Guessing from DOM selectors breaks silently the moment markup changes or something renders through a portal.
 

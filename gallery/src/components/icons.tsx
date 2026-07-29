@@ -53,3 +53,12 @@ export function SplitIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+/** 고정 — 별. 채움 여부로 상태를 보인다. */
+export function StarIcon({ filled, ...props }: SVGProps<SVGSVGElement> & { filled?: boolean }) {
+  return (
+    <svg {...base} fill={filled ? "currentColor" : "none"} {...props}>
+      <path d="M12 3l2.6 5.3 5.9.9-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8L3.5 9.2l5.9-.9z" />
+    </svg>
+  );
+}
