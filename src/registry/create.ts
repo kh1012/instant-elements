@@ -17,6 +17,44 @@ import {
 /** `cn` 헬퍼가 놓이는 자리 — elementsDir 안의 공용 유틸 디렉토리. */
 export const LIB_DIR_NAME = "_lib";
 
+/**
+ * 카테고리에 맞는 애니메이션 계약을 만든다.
+ *
+ * 스캐폴드는 **자기가 통과해야 할 게이트를 통과한 상태**로 나와야 한다. 안 그러면 갓 만든
+ * 컴포넌트가 즉시 차단되고, 그 소음이 반복되면 게이트 자체를 무시하게 된다.
+ *
+ * - Composite → `targets: []`. 아직 얹을 자리를 선언하지 않았다는 **사실**이다(생략과 다르다).
+ * - System    → 선언하지 않는다.
+ * - Animations→ 추측할 수 없다. standalone 인지 behavior 인지는 만드는 사람만 안다 —
+ *               그래서 생성 시점에 `--animation-kind` 로 받는다.
+ */
+export function defaultAnimation(
+  category: ElementCategory,
+  options: { kind?: "standalone" | "behavior"; reason?: string; exportName: string },
+): unknown {
+  if (category === "System") return undefined;
+  if (category === "Composite") return { kind: "target", targets: [] };
+
+  if (options.kind === "behavior") {
+    // 가장 보수적인 선언으로 시작한다 — 실제 능력에 맞게 좁히거나 넓히는 건 만드는 사람 몫이고,
+    // 검증 게이트가 빠진 곳을 짚어 준다.
+    return {
+      kind: "behavior",
+      behaviorId: options.exportName
+        .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
+        .toLowerCase(),
+      exportName: options.exportName,
+      requires: ["surface"],
+      acceptsHosts: ["block"],
+      triggers: ["load"],
+      defaultTrigger: "load",
+      parameters: [],
+      reducedMotion: "disabled",
+    };
+  }
+  return { kind: "standalone", reason: options.reason ?? "" };
+}
+
 export interface CreateElementInput {
   name: string;
   /** 요청 원문. 왜 만들었나의 근거라 그대로 보존한다. */
@@ -27,6 +65,10 @@ export interface CreateElementInput {
   status?: ElementStatus;
   keywords?: string[];
   exportName?: string;
+  /** Animations 일 때만 — standalone 인지 이식 가능한 behavior 인지. */
+  animationKind?: "standalone" | "behavior";
+  /** standalone 일 때 왜 이식 가능하지 않은지. */
+  animationReason?: string;
   /** git user.name. */
   createdBy: string;
   /** 덮어쓰기 허용. */
@@ -117,6 +159,13 @@ export function createElement(
       usage: `<${exportName} title="${exportName}" />`,
     },
   };
+
+  const animation = defaultAnimation(input.category ?? "Composite", {
+    ...(input.animationKind ? { kind: input.animationKind } : {}),
+    ...(input.animationReason ? { reason: input.animationReason } : {}),
+    exportName,
+  });
+  if (animation !== undefined) entry.meta.animation = animation;
   writeEntry(dirs, entry);
   written.push(relPath(config.root, paths.entry));
 

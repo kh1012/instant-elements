@@ -10,6 +10,7 @@ import { appendHistory, isHistoryAction, readHistory } from "../../registry/hist
 import { buildIndex } from "../../registry/index-file.js";
 import { isCategory, isStatus } from "../../registry/schema.js";
 import { applySchema, computeSchema } from "../../schema/apply.js";
+import { validateRegistry } from "../../validate/index.js";
 import { listEntryNames } from "../../registry/entry.js";
 import { CliError, color, emitJson, info, ok, warn } from "../ui.js";
 
@@ -64,6 +65,23 @@ async function runNew(ctx: CommandContext): Promise<void> {
   if (!isStatus(status))
     throw new CliError(`--status 는 draft|stable 중 하나여야 합니다: ${status}`, { exitCode: 64 });
 
+  // Animations 는 standalone 인지 이식 가능한 behavior 인지를 추측할 수 없다 — 만드는 사람만 안다.
+  const animationKind = flagString(ctx.args.flags, "animation-kind");
+  if (category === "Animations") {
+    if (animationKind !== "standalone" && animationKind !== "behavior") {
+      throw new CliError("--animation-kind 가 필요합니다 (standalone | behavior).", {
+        exitCode: 64,
+        hint: "standalone = 자체 오버레이·수명주기를 소유하는 독립 위젯 · behavior = 다른 요소에 얹는 이식 가능한 효과",
+      });
+    }
+    if (animationKind === "standalone" && !flagString(ctx.args.flags, "animation-reason")) {
+      throw new CliError("--animation-reason 이 필요합니다.", {
+        exitCode: 64,
+        hint: "왜 이식 가능한 behavior 가 아닌지 한 줄로 남기세요.",
+      });
+    }
+  }
+
   const result = createElement(config, {
     name,
     intent: requireText(ctx, "intent", "무엇을 왜 만들라고 했는지 원문 그대로 남깁니다."),
@@ -75,6 +93,12 @@ async function runNew(ctx: CommandContext): Promise<void> {
     category,
     status,
     keywords: flagList(ctx.args.flags, "keywords"),
+    ...(animationKind === "standalone" || animationKind === "behavior"
+      ? { animationKind }
+      : {}),
+    ...(flagString(ctx.args.flags, "animation-reason")
+      ? { animationReason: flagString(ctx.args.flags, "animation-reason") as string }
+      : {}),
     createdBy: actorOf(config.root),
     ...(flagString(ctx.args.flags, "export-name")
       ? { exportName: flagString(ctx.args.flags, "export-name") as string }
@@ -266,6 +290,49 @@ async function runSchema(ctx: CommandContext): Promise<void> {
   }
 }
 
+/**
+ * 검증 게이트.
+ *
+ * 완료 처리 전에 돌린다. block 이 하나라도 있으면 종료코드 1 — 갤러리 딥링크를 "확인됨"으로
+ * 말하기 전에 이걸 통과해야 한다.
+ */
+async function runValidate(ctx: CommandContext): Promise<void> {
+  const config = await loadConfig(ctx);
+  const only = ctx.args.positionals[1];
+  const result = validateRegistry(config, {
+    ...(only ? { only } : {}),
+    animationStrict: flagBool(ctx.args.flags, "animation-strict"),
+  });
+
+  if (flagBool(ctx.args.flags, "json")) {
+    emitJson(result);
+    process.exitCode = result.ok ? 0 : 1;
+    return;
+  }
+
+  const blocks = result.findings.filter((f) => f.level === "block");
+  const warns = result.findings.filter((f) => f.level === "warn");
+
+  for (const finding of result.findings) {
+    const mark = finding.level === "block" ? color.red("✗") : color.yellow("!");
+    const at = finding.line ? `${finding.file}:${finding.line}` : finding.file;
+    info(`  ${mark} ${color.dim(at)}  ${finding.message}`);
+    if (finding.hint) info(`      ${color.dim(finding.hint)}`);
+  }
+  if (result.findings.length > 0) info("");
+
+  if (blocks.length > 0) {
+    warn(`${result.checked}개 검사 · 차단 ${blocks.length}건 · 경고 ${warns.length}건`);
+    process.exitCode = 1;
+    return;
+  }
+  if (warns.length > 0) {
+    warn(`${result.checked}개 검사 · 경고 ${warns.length}건 (차단 없음)`);
+    return;
+  }
+  ok(`${result.checked}개 검사 · 통과`);
+}
+
 export const elementCommand = defineCommand({
   name: "element",
   summary: "컴포넌트를 만들고 조회하고 이력을 남긴다",
@@ -273,11 +340,13 @@ export const elementCommand = defineCommand({
   details: [
     "new <name>   --intent <원문> --summary <한 문장> [--category Composite|Animations|System]",
     "             [--keywords a,b] [--export-name X] [--force]",
+    "             Animations 면 --animation-kind standalone|behavior (standalone 은 --animation-reason)",
     "             긴 원문은 --intent-file <경로> 로 줄 수 있습니다.",
     "list         [--category X] [--status draft|stable] [--query 검색어] [--json]",
     "get <name>   엔트리 + 히스토리 + 계약 검사 [--json]",
     "log <name>   --action modified|recommended [--note …] [--prompt-file …] [--sha …]",
     "schema [name] TS Props 타입에서 props 스키마를 추출해 엔트리에 백필 [--check] [--json]",
+    "validate [name]  하드룰 검증 게이트 [--animation-strict] [--json]",
   ],
   async run(ctx) {
     const sub = ctx.args.positionals[0];
@@ -292,10 +361,12 @@ export const elementCommand = defineCommand({
         return runLog(ctx);
       case "schema":
         return runSchema(ctx);
+      case "validate":
+        return runValidate(ctx);
       default:
         throw new CliError(`알 수 없는 하위 명령: ${sub ?? "(없음)"}`, {
           exitCode: 64,
-          hint: "사용 가능: new · list · get · log · schema — `ie help element` 로 상세 도움말.",
+          hint: "사용 가능: new · list · get · log · schema · validate — `ie help element` 로 상세 도움말.",
         });
     }
   },
