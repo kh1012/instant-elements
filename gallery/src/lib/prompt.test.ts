@@ -153,4 +153,20 @@ describe("분할 프롬프트", () => {
   it("기록 절차를 함께 싣는다", () => {
     expect(buildSplitPrompt(entry(), ctx)).toContain("ie element log stat-card --action modified");
   });
+
+  it("조각의 카테고리를 원본과 별개로 판단하라고 안내한다", () => {
+    // 여러 컴포넌트가 공유하는 구조 프리미티브는 Composite 가 아니라 System 이다.
+    const prompt = buildSplitPrompt(entry(), ctx);
+    expect(prompt).toContain("조각의 카테고리는 원본과 다를 수 있다");
+    expect(prompt).toContain("System");
+  });
+
+  it("이미 Composite 인 원본에게 category 를 바꾸라고 하지 않는다", () => {
+    expect(buildSplitPrompt(entry({ category: "Composite" }), ctx)).toContain(
+      "이미 Composite 이니 category 는 그대로",
+    );
+    expect(buildSplitPrompt(entry({ category: "System" }), ctx)).toContain(
+      "Composite 로 맞춘다",
+    );
+  });
 });

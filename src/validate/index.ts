@@ -136,6 +136,23 @@ export function validateRegistry(
       findings.push(...scanSource(entry, rel(sourcePath), readFileSync(sourcePath, "utf8"), config));
     }
 
+    /*
+     * 배럴이 없으면 **타입체크는 통과하는데 번들러만 import 를 못 찾는다.**
+     * tsconfig paths 는 디렉토리를 파일로 해석해 주지만 Vite·Rollup 은 그 디렉토리의
+     * index 를 실제로 찾기 때문이다. 빌드까지 가야 드러나는 종류라 여기서 잡는다.
+     *
+     * _근거: 상류 하네스 ea81b2f54 — 조각을 만들며 index.ts 를 빠뜨려 겪은 문제._
+     */
+    if (!existsSync(paths.index)) {
+      findings.push({
+        level: "block",
+        name: entry.name,
+        file: rel(paths.dir),
+        message: "배럴(index.ts)이 없습니다.",
+        hint: `타입체크는 통과하지만 번들러가 "${config.importAlias}/${entry.name}" 을 해석하지 못합니다.`,
+      });
+    }
+
     if (!existsSync(paths.demo)) {
       findings.push({
         level: "block",
