@@ -16,11 +16,11 @@
   "author": "kh1012",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kh1012/instant-ui.git"
+    "url": "git+https://github.com/kh1012/instant-elements.git"
   },
-  "homepage": "https://github.com/kh1012/instant-ui#readme",
+  "homepage": "https://github.com/kh1012/instant-elements#readme",
   "bugs": {
-    "url": "https://github.com/kh1012/instant-ui/issues"
+    "url": "https://github.com/kh1012/instant-elements/issues"
   },
   "files": [
     "README.md"
