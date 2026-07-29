@@ -1,0 +1,41 @@
+/*
+ * instant-elements — base 레이어.
+ *
+ * 소비 프로젝트의 전역 스타일을 침범하지 않도록 **`[data-instant]` 서브트리로만** 스코프한다.
+ * 앱 루트(또는 컴포넌트를 감쌀 요소)에 다음을 붙이면 켜진다:
+ *
+ *   <html data-instant data-theme="light">
+ *
+ * `data-theme` 를 생략하면 colors.css 가 OS 설정(prefers-color-scheme)을 따른다.
+ */
+
+@layer base {
+  /*
+   * Tailwind v4 에서 색 없는 `border` 유틸의 기본값은 currentColor(= 전경색)다. 그대로 두면
+   * 카드·입력·구분선 테두리가 전부 검게 나온다. 우리 서브트리 안에서만 st-border 로 되돌린다.
+   * 색을 지정한 유틸(border-st-primary 등)은 utilities 레이어라 항상 이 규칙을 이긴다.
+   */
+  [data-instant],
+  [data-instant] *,
+  [data-instant] *::before,
+  [data-instant] *::after {
+    border-color: var(--st-border);
+  }
+
+  [data-instant] :is(button, [role="button"]):not(:disabled) {
+    cursor: pointer;
+  }
+
+  /* 모션 접근성 — 사용자가 줄이기를 켰으면 모든 전환·애니메이션을 사실상 끈다.
+     컴포넌트마다 reduced-motion 을 다시 챙기지 않아도 되게 여기서 한 번에 처리한다. */
+  @media (prefers-reduced-motion: reduce) {
+    [data-instant] *,
+    [data-instant] *::before,
+    [data-instant] *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

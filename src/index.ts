@@ -15,3 +15,21 @@ export type {
   ValidateOptions,
 } from "./config/types.js";
 export { packageName, packageVersion } from "./pkg.js";
+export {
+  allColorTokens,
+  allowedRadiusClasses,
+  allowedTextClasses,
+  colorTokens,
+  duration,
+  radius,
+  recipeTokens,
+  typeScale,
+  zIndex,
+} from "./tokens.js";
+export type {
+  ColorToken,
+  RadiusToken,
+  RecipeToken,
+  TypeScaleToken,
+  ZIndexToken,
+} from "./tokens.js";

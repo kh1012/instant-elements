@@ -45,10 +45,17 @@
       "types": "./dist/config.d.ts",
       "import": "./dist/config.js"
     },
+    "./tokens": {
+      "types": "./dist/tokens.d.ts",
+      "import": "./dist/tokens.js"
+    },
+    "./theme.css": "./styles/theme.css",
+    "./styles/*": "./styles/*",
     "./package.json": "./package.json"
   },
   "files": [
     "dist",
+    "styles",
     "README.md",
     "LICENSE"
   ],
@@ -65,5 +72,8 @@
     "tsup": "^8.5.0",
     "typescript": "^5.9.0",
     "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "jiti": "^2.7.0"
   }
 }

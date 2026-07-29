@@ -1,0 +1,299 @@
+/*
+ * instant-elements — 시맨틱 색 토큰(`st-*`).
+ *
+ * 컴포넌트는 색을 직접 칠하지 않는다. `bg-st-primary` · `text-st-muted-foreground` ·
+ * `border-st-border` 처럼 **이름이 역할을 말하는 유틸**만 쓴다. 그래서 라이트/다크 전환과
+ * 팔레트 교체가 컴포넌트 코드를 한 줄도 건드리지 않고 끝난다.
+ *
+ * 테마 규칙 (원본 하네스의 순서 함정을 피하려고 명시적으로 짠다):
+ *   :root                                   → 라이트가 기본값
+ *   [data-theme="dark"]                     → 다크 명시 지정
+ *   @media(dark) :root:not([data-theme=light]) → OS 다크에 자동 추종
+ * 같은 specificity 규칙이 순서로 서로를 덮는 구조가 아니므로, 블록 순서를 바꿔도 깨지지 않는다.
+ *
+ * ── 팔레트를 우리 브랜드로 바꾸려면
+ * 이 파일을 복사해 값만 바꾸고 `instant.config.ts` 의 `tokens.css` 를 그 파일로 가리키면 된다.
+ * 토큰 **이름**은 그대로 두어야 갤러리와 기존 컴포넌트가 계속 동작한다.
+ */
+
+@theme inline {
+  --color-st-background: var(--st-background);
+  --color-st-canvas: var(--st-canvas);
+  --color-st-foreground: var(--st-foreground);
+  --color-st-card: var(--st-card);
+  --color-st-card-foreground: var(--st-card-foreground);
+  --color-st-popover: var(--st-popover);
+  --color-st-popover-foreground: var(--st-popover-foreground);
+  --color-st-primary: var(--st-primary);
+  --color-st-primary-foreground: var(--st-primary-foreground);
+  --color-st-secondary: var(--st-secondary);
+  --color-st-secondary-foreground: var(--st-secondary-foreground);
+  --color-st-muted: var(--st-muted);
+  --color-st-muted-foreground: var(--st-muted-foreground);
+  --color-st-accent: var(--st-accent);
+  --color-st-accent-foreground: var(--st-accent-foreground);
+  --color-st-destructive: var(--st-destructive);
+  --color-st-destructive-foreground: var(--st-destructive-foreground);
+  --color-st-success: var(--st-success);
+  --color-st-warning: var(--st-warning);
+  --color-st-info: var(--st-info);
+  --color-st-pending: var(--st-pending);
+  --color-st-border: var(--st-border);
+  --color-st-input: var(--st-input);
+  --color-st-ring: var(--st-ring);
+
+  /* 차트 계열 — 한 화면에서 서로 구분되도록 명도 순으로 배치한다. */
+  --color-st-chart-1: var(--st-chart-1);
+  --color-st-chart-2: var(--st-chart-2);
+  --color-st-chart-3: var(--st-chart-3);
+  --color-st-chart-4: var(--st-chart-4);
+  --color-st-chart-5: var(--st-chart-5);
+
+  /* 사이드바 — 본문과 다른 표면 톤을 가질 수 있게 별도 계열로 둔다. */
+  --color-st-sidebar: var(--st-sidebar);
+  --color-st-sidebar-foreground: var(--st-sidebar-foreground);
+  --color-st-sidebar-primary: var(--st-sidebar-primary);
+  --color-st-sidebar-primary-foreground: var(--st-sidebar-primary-foreground);
+  --color-st-sidebar-accent: var(--st-sidebar-accent);
+  --color-st-sidebar-accent-foreground: var(--st-sidebar-accent-foreground);
+  --color-st-sidebar-border: var(--st-sidebar-border);
+  --color-st-sidebar-ring: var(--st-sidebar-ring);
+
+  /* 컴포넌트 레시피 — 버튼·입력·뱃지·탭·스위치가 매번 색을 새로 유도하지 않도록 미리 조합해 둔다.
+     전부 위 코어 토큰에서 파생되므로 팔레트를 바꾸면 함께 따라온다. */
+  --color-st-button-secondary-border: var(--st-button-secondary-border);
+  --color-st-button-secondary-bg: var(--st-button-secondary-bg);
+  --color-st-button-secondary-hover-bg: var(--st-button-secondary-hover-bg);
+  --color-st-button-ghost-hover-bg: var(--st-button-ghost-hover-bg);
+  --color-st-button-destructive-bg: var(--st-button-destructive-bg);
+  --color-st-button-destructive-hover-bg: var(--st-button-destructive-hover-bg);
+  --color-st-button-destructive-focus-ring: var(--st-button-destructive-focus-ring);
+  --color-st-control-bg: var(--st-control-bg);
+  --color-st-control-hover-bg: var(--st-control-hover-bg);
+  --color-st-control-disabled-bg: var(--st-control-disabled-bg);
+  --color-st-control-invalid-border: var(--st-control-invalid-border);
+  --color-st-control-invalid-ring: var(--st-control-invalid-ring);
+  --color-st-badge-danger-bg: var(--st-badge-danger-bg);
+  --color-st-badge-info-bg: var(--st-badge-info-bg);
+  --color-st-badge-success-bg: var(--st-badge-success-bg);
+  --color-st-interactive-muted-hover-bg: var(--st-interactive-muted-hover-bg);
+  --color-st-field-checked-border: var(--st-field-checked-border);
+  --color-st-field-checked-bg: var(--st-field-checked-bg);
+  --color-st-tabs-trigger-fg: var(--st-tabs-trigger-fg);
+  --color-st-tabs-active-border: var(--st-tabs-active-border);
+  --color-st-tabs-active-bg: var(--st-tabs-active-bg);
+  --color-st-switch-unchecked-bg: var(--st-switch-unchecked-bg);
+  --color-st-switch-thumb-checked-bg: var(--st-switch-thumb-checked-bg);
+  --color-st-switch-thumb-unchecked-bg: var(--st-switch-thumb-unchecked-bg);
+}
+
+/* ── 라이트(기본값) ─────────────────────────────────────────────────────────── */
+:root {
+  --st-background: oklch(1 0 0);
+  --st-canvas: oklch(0.984 0.003 247.86);
+  --st-foreground: oklch(0.145 0.04 265.75);
+  --st-card: oklch(1 0 0);
+  --st-card-foreground: oklch(0.145 0.04 265.75);
+  --st-popover: oklch(1 0 0);
+  --st-popover-foreground: oklch(0.145 0.04 265.75);
+  --st-primary: oklch(0.511 0.23 276.97);
+  --st-primary-foreground: oklch(0.97 0.014 254.6);
+  --st-secondary: oklch(0.967 0.007 248.14);
+  --st-secondary-foreground: oklch(0.21 0.04 265.57);
+  --st-muted: oklch(0.97 0.006 247.89);
+  --st-muted-foreground: oklch(0.556 0.041 257.41);
+  --st-accent: oklch(0.97 0.006 247.89);
+  --st-accent-foreground: oklch(0.205 0.04 265.75);
+  --st-destructive: oklch(0.577 0.245 27.33);
+  --st-destructive-foreground: oklch(0.985 0.003 247.86);
+  --st-success: oklch(0.637 0.139 159.37);
+  --st-warning: oklch(0.769 0.165 70.08);
+  --st-info: oklch(0.588 0.139 241.97);
+  --st-pending: oklch(0.711 0.035 256.79);
+  --st-border: oklch(0.922 0.013 255.21);
+  --st-input: oklch(0.922 0.013 255.21);
+  --st-ring: oklch(0.708 0.035 256.8);
+
+  --st-chart-1: oklch(0.809 0.105 251.81);
+  --st-chart-2: oklch(0.623 0.214 259.82);
+  --st-chart-3: oklch(0.546 0.245 262.88);
+  --st-chart-4: oklch(0.488 0.243 264.38);
+  --st-chart-5: oklch(0.424 0.199 265.64);
+
+  --st-sidebar: oklch(0.985 0.003 247.86);
+  --st-sidebar-foreground: oklch(0.145 0.04 265.75);
+  --st-sidebar-primary: oklch(0.546 0.245 262.88);
+  --st-sidebar-primary-foreground: oklch(0.97 0.014 254.6);
+  --st-sidebar-accent: oklch(0.97 0.006 247.89);
+  --st-sidebar-accent-foreground: oklch(0.205 0.04 265.75);
+  --st-sidebar-border: oklch(0.922 0.013 255.21);
+  --st-sidebar-ring: oklch(0.708 0.035 256.8);
+
+  --st-button-secondary-border: var(--st-border);
+  --st-button-secondary-bg: var(--st-background);
+  --st-button-secondary-hover-bg: var(--st-muted);
+  --st-button-ghost-hover-bg: var(--st-muted);
+  --st-button-destructive-bg: color-mix(in oklch, var(--st-destructive) 10%, transparent);
+  --st-button-destructive-hover-bg: color-mix(in oklch, var(--st-destructive) 20%, transparent);
+  --st-button-destructive-focus-ring: color-mix(in oklch, var(--st-destructive) 20%, transparent);
+  --st-control-bg: transparent;
+  --st-control-hover-bg: color-mix(in oklch, var(--st-muted) 40%, transparent);
+  --st-control-disabled-bg: color-mix(in oklch, var(--st-input) 50%, transparent);
+  --st-control-invalid-border: var(--st-destructive);
+  --st-control-invalid-ring: color-mix(in oklch, var(--st-destructive) 20%, transparent);
+  --st-badge-danger-bg: color-mix(in oklch, var(--st-destructive) 10%, transparent);
+  --st-badge-info-bg: color-mix(in oklch, var(--st-info) 10%, transparent);
+  --st-badge-success-bg: color-mix(in oklch, var(--st-success) 12%, transparent);
+  --st-interactive-muted-hover-bg: var(--st-muted);
+  --st-field-checked-border: color-mix(in oklch, var(--st-primary) 30%, transparent);
+  --st-field-checked-bg: color-mix(in oklch, var(--st-primary) 5%, transparent);
+  --st-tabs-trigger-fg: color-mix(in oklch, var(--st-foreground) 60%, transparent);
+  --st-tabs-active-border: transparent;
+  --st-tabs-active-bg: var(--st-background);
+  --st-switch-unchecked-bg: var(--st-input);
+  --st-switch-thumb-checked-bg: var(--st-background);
+  --st-switch-thumb-unchecked-bg: var(--st-background);
+}
+
+/* ── 다크 ────────────────────────────────────────────────────────────────────
+   두 셀렉터가 같은 값을 공유한다: 명시 지정(data-theme="dark")과 OS 추종.
+   OS 추종은 사용자가 라이트를 **명시**하지 않았을 때만 적용된다. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --st-background: oklch(0.145 0.04 265.75);
+    --st-canvas: oklch(0.145 0.04 265.75);
+    --st-foreground: oklch(0.985 0.003 247.86);
+    --st-card: oklch(0.205 0.04 265.75);
+    --st-card-foreground: oklch(0.985 0.003 247.86);
+    --st-popover: oklch(0.205 0.04 265.75);
+    --st-popover-foreground: oklch(0.985 0.003 247.86);
+    --st-primary: oklch(0.62 0.23 276.97);
+    --st-primary-foreground: oklch(0.97 0.014 254.6);
+    --st-secondary: oklch(0.274 0.037 260.47);
+    --st-secondary-foreground: oklch(0.985 0.003 247.86);
+    --st-muted: oklch(0.269 0.037 260.87);
+    --st-muted-foreground: oklch(0.708 0.035 256.8);
+    --st-accent: oklch(0.269 0.037 260.87);
+    --st-accent-foreground: oklch(0.985 0.003 247.86);
+    --st-destructive: oklch(0.704 0.191 22.22);
+    --st-destructive-foreground: oklch(0.985 0.003 247.86);
+    --st-success: oklch(0.7 0.139 159.37);
+    --st-warning: oklch(0.82 0.165 70.08);
+    --st-info: oklch(0.678 0.118 241.97);
+    --st-pending: oklch(0.741 0.035 256.79);
+    --st-border: oklch(1 0 0 / 10%);
+    --st-input: oklch(1 0 0 / 15%);
+    --st-ring: oklch(0.556 0.041 257.41);
+
+    /* 다크에서는 램프를 통째로 밝은 쪽으로 올린다 — 라이트 값을 그대로 쓰면 뒤쪽 계열(4·5)이
+       어두운 배경에 묻혀 계열 구분이 사라진다. */
+    --st-chart-1: oklch(0.809 0.105 251.81);
+    --st-chart-2: oklch(0.72 0.16 259.82);
+    --st-chart-3: oklch(0.66 0.19 262.88);
+    --st-chart-4: oklch(0.6 0.2 264.38);
+    --st-chart-5: oklch(0.54 0.18 265.64);
+
+    --st-sidebar: oklch(0.205 0.04 265.75);
+    --st-sidebar-foreground: oklch(0.985 0.003 247.86);
+    --st-sidebar-primary: oklch(0.623 0.214 259.82);
+    --st-sidebar-primary-foreground: oklch(0.97 0.014 254.6);
+    --st-sidebar-accent: oklch(0.269 0.037 260.87);
+    --st-sidebar-accent-foreground: oklch(0.985 0.003 247.86);
+    --st-sidebar-border: oklch(1 0 0 / 10%);
+    --st-sidebar-ring: oklch(0.556 0.041 257.41);
+
+    --st-button-secondary-border: var(--st-input);
+    --st-button-secondary-bg: color-mix(in oklch, var(--st-input) 30%, transparent);
+    --st-button-secondary-hover-bg: color-mix(in oklch, var(--st-input) 50%, transparent);
+    --st-button-ghost-hover-bg: color-mix(in oklch, var(--st-muted) 50%, transparent);
+    --st-button-destructive-bg: color-mix(in oklch, var(--st-destructive) 20%, transparent);
+    --st-button-destructive-hover-bg: color-mix(in oklch, var(--st-destructive) 30%, transparent);
+    --st-button-destructive-focus-ring: color-mix(in oklch, var(--st-destructive) 40%, transparent);
+    --st-control-bg: color-mix(in oklch, var(--st-input) 30%, transparent);
+    --st-control-hover-bg: color-mix(in oklch, var(--st-input) 50%, transparent);
+    --st-control-disabled-bg: color-mix(in oklch, var(--st-input) 80%, transparent);
+    --st-control-invalid-border: color-mix(in oklch, var(--st-destructive) 50%, transparent);
+    --st-control-invalid-ring: color-mix(in oklch, var(--st-destructive) 40%, transparent);
+    --st-badge-danger-bg: color-mix(in oklch, var(--st-destructive) 20%, transparent);
+    --st-badge-info-bg: color-mix(in oklch, var(--st-info) 20%, transparent);
+    --st-badge-success-bg: color-mix(in oklch, var(--st-success) 20%, transparent);
+    --st-interactive-muted-hover-bg: color-mix(in oklch, var(--st-muted) 50%, transparent);
+    --st-field-checked-border: color-mix(in oklch, var(--st-primary) 20%, transparent);
+    --st-field-checked-bg: color-mix(in oklch, var(--st-primary) 10%, transparent);
+    --st-tabs-trigger-fg: var(--st-muted-foreground);
+    --st-tabs-active-border: var(--st-input);
+    --st-tabs-active-bg: color-mix(in oklch, var(--st-input) 30%, transparent);
+    --st-switch-unchecked-bg: color-mix(in oklch, var(--st-input) 80%, transparent);
+    --st-switch-thumb-checked-bg: var(--st-primary-foreground);
+    --st-switch-thumb-unchecked-bg: var(--st-foreground);
+  }
+}
+
+[data-theme="dark"] {
+  --st-background: oklch(0.145 0.04 265.75);
+  --st-canvas: oklch(0.145 0.04 265.75);
+  --st-foreground: oklch(0.985 0.003 247.86);
+  --st-card: oklch(0.205 0.04 265.75);
+  --st-card-foreground: oklch(0.985 0.003 247.86);
+  --st-popover: oklch(0.205 0.04 265.75);
+  --st-popover-foreground: oklch(0.985 0.003 247.86);
+  --st-primary: oklch(0.62 0.23 276.97);
+  --st-primary-foreground: oklch(0.97 0.014 254.6);
+  --st-secondary: oklch(0.274 0.037 260.47);
+  --st-secondary-foreground: oklch(0.985 0.003 247.86);
+  --st-muted: oklch(0.269 0.037 260.87);
+  --st-muted-foreground: oklch(0.708 0.035 256.8);
+  --st-accent: oklch(0.269 0.037 260.87);
+  --st-accent-foreground: oklch(0.985 0.003 247.86);
+  --st-destructive: oklch(0.704 0.191 22.22);
+  --st-destructive-foreground: oklch(0.985 0.003 247.86);
+  --st-success: oklch(0.7 0.139 159.37);
+  --st-warning: oklch(0.82 0.165 70.08);
+  --st-info: oklch(0.678 0.118 241.97);
+  --st-pending: oklch(0.741 0.035 256.79);
+  --st-border: oklch(1 0 0 / 10%);
+  --st-input: oklch(1 0 0 / 15%);
+  --st-ring: oklch(0.556 0.041 257.41);
+
+  /* 다크에서는 램프를 통째로 밝은 쪽으로 올린다 — 라이트 값을 그대로 쓰면 뒤쪽 계열(4·5)이
+     어두운 배경에 묻혀 계열 구분이 사라진다. */
+  --st-chart-1: oklch(0.809 0.105 251.81);
+  --st-chart-2: oklch(0.72 0.16 259.82);
+  --st-chart-3: oklch(0.66 0.19 262.88);
+  --st-chart-4: oklch(0.6 0.2 264.38);
+  --st-chart-5: oklch(0.54 0.18 265.64);
+
+  --st-sidebar: oklch(0.205 0.04 265.75);
+  --st-sidebar-foreground: oklch(0.985 0.003 247.86);
+  --st-sidebar-primary: oklch(0.623 0.214 259.82);
+  --st-sidebar-primary-foreground: oklch(0.97 0.014 254.6);
+  --st-sidebar-accent: oklch(0.269 0.037 260.87);
+  --st-sidebar-accent-foreground: oklch(0.985 0.003 247.86);
+  --st-sidebar-border: oklch(1 0 0 / 10%);
+  --st-sidebar-ring: oklch(0.556 0.041 257.41);
+
+  --st-button-secondary-border: var(--st-input);
+  --st-button-secondary-bg: color-mix(in oklch, var(--st-input) 30%, transparent);
+  --st-button-secondary-hover-bg: color-mix(in oklch, var(--st-input) 50%, transparent);
+  --st-button-ghost-hover-bg: color-mix(in oklch, var(--st-muted) 50%, transparent);
+  --st-button-destructive-bg: color-mix(in oklch, var(--st-destructive) 20%, transparent);
+  --st-button-destructive-hover-bg: color-mix(in oklch, var(--st-destructive) 30%, transparent);
+  --st-button-destructive-focus-ring: color-mix(in oklch, var(--st-destructive) 40%, transparent);
+  --st-control-bg: color-mix(in oklch, var(--st-input) 30%, transparent);
+  --st-control-hover-bg: color-mix(in oklch, var(--st-input) 50%, transparent);
+  --st-control-disabled-bg: color-mix(in oklch, var(--st-input) 80%, transparent);
+  --st-control-invalid-border: color-mix(in oklch, var(--st-destructive) 50%, transparent);
+  --st-control-invalid-ring: color-mix(in oklch, var(--st-destructive) 40%, transparent);
+  --st-badge-danger-bg: color-mix(in oklch, var(--st-destructive) 20%, transparent);
+  --st-badge-info-bg: color-mix(in oklch, var(--st-info) 20%, transparent);
+  --st-badge-success-bg: color-mix(in oklch, var(--st-success) 20%, transparent);
+  --st-interactive-muted-hover-bg: color-mix(in oklch, var(--st-muted) 50%, transparent);
+  --st-field-checked-border: color-mix(in oklch, var(--st-primary) 20%, transparent);
+  --st-field-checked-bg: color-mix(in oklch, var(--st-primary) 10%, transparent);
+  --st-tabs-trigger-fg: var(--st-muted-foreground);
+  --st-tabs-active-border: var(--st-input);
+  --st-tabs-active-bg: color-mix(in oklch, var(--st-input) 30%, transparent);
+  --st-switch-unchecked-bg: color-mix(in oklch, var(--st-input) 80%, transparent);
+  --st-switch-thumb-checked-bg: var(--st-primary-foreground);
+  --st-switch-thumb-unchecked-bg: var(--st-foreground);
+}

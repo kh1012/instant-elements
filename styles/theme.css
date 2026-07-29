@@ -1,0 +1,18 @@
+/*
+ * instant-elements 토큰 진입점.
+ *
+ * 소비 프로젝트의 Tailwind 진입 CSS 에서 한 줄로 가져온다:
+ *
+ *   @import "tailwindcss";
+ *   @import "instant-elements/theme.css";
+ *   @source "./elements";      ← 생성된 컴포넌트의 클래스도 스캔되도록
+ *
+ * 그리고 앱 루트에 `data-instant` 를 붙인다(스코프 · styles/base.css 참고).
+ *
+ * 이 파일은 **토큰만** 공급하고 `@source` 는 걸지 않는다 — 무엇을 스캔할지는 소비자(앱 또는
+ * 갤러리)마다 다르고, 라이브러리가 그걸 대신 정하면 쓰지도 않는 유틸이 대량 생성된다.
+ */
+
+@import "./tokens.css";
+@import "./colors.css";
+@import "./base.css";

@@ -1,0 +1,73 @@
+/*
+ * instant-elements — 비색상 토큰(타입 스케일 · radius · z-index · 폰트 · duration).
+ *
+ * 색은 colors.css 가 담당한다. 컴포넌트는 여기서 나오는 Tailwind 유틸만 쓴다:
+ *   text-step-n2 … text-step-3 · rounded-xs … rounded-xl · z-popover/modal/tooltip · duration-fast
+ *
+ * 값이 바뀌면 src/tokens.ts 의 매니페스트도 함께 갱신한다(검증 게이트가 그 목록을 본다).
+ */
+
+/* `dark:` 유틸을 data-theme 에 연결한다. 등록하지 않으면 dark: 가 OS 설정(prefers-color-scheme)만
+   보고 우리 테마 토글과 어긋난다. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme inline {
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, "Noto Sans", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Fira Code", Menlo, Consolas, monospace;
+
+  /* 타입 스케일 — 1.25 비율. 임의 font-size 대신 이 6단계만 쓴다. */
+  --text-step-n2: var(--ie-step-n2);
+  --text-step-n1: var(--ie-step-n1);
+  --text-step-0: var(--ie-step-0);
+  --text-step-1: var(--ie-step-1);
+  --text-step-2: var(--ie-step-2);
+  --text-step-3: var(--ie-step-3);
+
+  /* radius — Tailwind 기본값을 덮는다. 임의 border-radius 대신 이 스케일만. */
+  --radius-xs: 3px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
+  --z-index-popover: 35;
+  --z-index-modal-backdrop: 45;
+  --z-index-modal: 50;
+  --z-index-modal-popover: 55;
+  --z-index-tooltip: 60;
+
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+
+  /* 등장·전환에 공통으로 쓰는 이징. 이 하나로 통일하면 화면 전체의 움직임이 한 곡선이 된다. */
+  --ease-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Tailwind 는 named z 유틸을 자동 생성하지 않으므로 직접 정의한다.
+   누락되면 z-index:auto 로 떨어져 팝오버가 모달 뒤로 숨는다. */
+@utility z-popover {
+  z-index: var(--z-index-popover);
+}
+@utility z-modal-backdrop {
+  z-index: var(--z-index-modal-backdrop);
+}
+@utility z-modal {
+  z-index: var(--z-index-modal);
+}
+@utility z-modal-popover {
+  z-index: var(--z-index-modal-popover);
+}
+@utility z-tooltip {
+  z-index: var(--z-index-tooltip);
+}
+
+:root {
+  --ie-step-n2: 0.72rem;
+  --ie-step-n1: 0.9rem;
+  --ie-step-0: 1rem;
+  --ie-step-1: 1.25rem;
+  --ie-step-2: 1.563rem;
+  --ie-step-3: 1.953rem;
+}
