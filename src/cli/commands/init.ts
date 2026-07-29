@@ -111,8 +111,12 @@ export const initCommand = defineCommand({
     info("");
     info(`  ${color.dim("3.")} ${color.cyan(`"${importAlias}/*"`)} 별칭을 tsconfig paths 에 추가하세요.`);
     info("");
-    info(`  ${color.dim("4.")} 첫 컴포넌트를 만들어 보세요:`);
-    info(`       ${color.cyan('ie element new stat-card --intent "…" --summary "…"')}`);
+    info(`  ${color.dim("4.")} 코딩 에이전트에 스킬을 설치하세요:`);
+    info(`       ${color.cyan("ie skills install")}`);
+    info("");
+    info(`  ${color.dim("5.")} 이제 에이전트에게 말로 시키면 됩니다:`);
+    info(`       ${color.cyan('"대시보드에 쓸 지표 카드 만들어줘"')}`);
+    info(`       ${color.dim("직접 만들려면  ie element new stat-card --intent \"…\" --summary \"…\"")}`);
 
     if (skipped.includes("instant.config.ts")) {
       info("");
