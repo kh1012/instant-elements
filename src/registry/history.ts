@@ -1,35 +1,15 @@
 import { elementPaths, type RegistryDirs } from "./paths.js";
 import { appendLine, readJsonl } from "./io.js";
+import { isHistoryAction, type HistoryEvent } from "./schema.js";
 
 /**
- * 히스토리 이벤트 — "무엇이 언제 왜 일어났나"의 append-only 기록.
+ * 히스토리 사이드카 읽기·쓰기.
  *
- * - `created`     최초 생성. 요청 원문이 `prompt` 에 그대로 남는다.
- * - `modified`    코드를 실제로 고쳤을 때. `sha` 가 있으면 그 커밋이 곧 복원 지점이다.
- * - `recommended` 신규 생성 대신 기존 컴포넌트를 추천했을 때. 코드는 안 바뀌지만 **이것만은 남긴다** —
- *                 없으면 하네스의 존재 이유인 재사용률을 영영 잴 수 없다.
+ * 이벤트 **타입**은 `schema.ts` 에 있다 — 갤러리(브라우저)가 그 타입만 참조하고 이 파일의
+ * node 의존은 안 끌고 가도록 계약과 구현을 갈라 둔다.
  */
-export type HistoryAction = "created" | "modified" | "recommended";
-
-export const HISTORY_ACTIONS: HistoryAction[] = ["created", "modified", "recommended"];
-
-export interface HistoryEvent {
-  /** ISO 8601. 실제 시각이어야 한다. */
-  at: string;
-  /** git user.name (없으면 "unknown"). */
-  actor: string;
-  action: HistoryAction;
-  /** 요청 원문. 개행·코드펜스·URL 을 그대로 보존한다. */
-  prompt?: string;
-  /** 무엇을 했는지 한 줄 요약. */
-  note?: string;
-  /** 이 변경의 코드 커밋 SHA. 갤러리 "복원"이 가리키는 지점. */
-  sha?: string;
-}
-
-export function isHistoryAction(value: unknown): value is HistoryAction {
-  return typeof value === "string" && (HISTORY_ACTIONS as string[]).includes(value);
-}
+export type { HistoryAction, HistoryEvent } from "./schema.js";
+export { HISTORY_ACTIONS, isHistoryAction } from "./schema.js";
 
 export function appendHistory(dirs: RegistryDirs, name: string, event: HistoryEvent): void {
   appendLine(elementPaths(dirs, name).history, JSON.stringify(event));

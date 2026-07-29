@@ -2,6 +2,7 @@ import type { Command } from "../command.js";
 import { configCommand } from "./config.js";
 import { doctorCommand } from "./doctor.js";
 import { elementCommand } from "./element.js";
+import { galleryCommand } from "./gallery.js";
 import { indexCommand } from "./index-cmd.js";
 import { initCommand } from "./init.js";
 
@@ -9,6 +10,7 @@ import { initCommand } from "./init.js";
 export const commands: Command[] = [
   initCommand,
   elementCommand,
+  galleryCommand,
   indexCommand,
   configCommand,
   doctorCommand,

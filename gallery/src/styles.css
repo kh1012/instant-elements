@@ -1,0 +1,85 @@
+/*
+ * 갤러리 크롬 전용 스타일.
+ *
+ * 이 파일은 갤러리 화면에만 적용된다 — 소비 프로젝트의 디자인 시스템에는 아무 영향이 없다.
+ * 토큰(st-*)은 가상 모듈이 앞에 붙여 준다.
+ */
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--st-background);
+  color: var(--st-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 상호작용 표면 공통 — 색·그림자·변형이 한 곡선으로 움직이게 한다. */
+.press {
+  transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+  transition-duration: 200ms;
+  transition-timing-function: var(--ease-smooth);
+}
+
+.press:active {
+  transform: translateY(1px);
+}
+
+@keyframes ie-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.anim-fade-up {
+  animation: ie-fade-up 0.42s var(--ease-smooth) both;
+}
+
+/*
+ * 스크롤바 — `:where(*)` 는 specificity 가 0 이라 어떤 컴포넌트 스타일도 이걸 덮을 수 있다.
+ * 한 곳 선언으로 모든 스크롤 영역에 일괄 적용되므로 컴포넌트마다 챙길 필요가 없다.
+ */
+:root {
+  --ie-scrollbar-thumb: color-mix(in oklch, var(--st-muted-foreground) 40%, transparent);
+  --ie-scrollbar-thumb-hover: color-mix(in oklch, var(--st-foreground) 36%, transparent);
+}
+
+:where(*) {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ie-scrollbar-thumb) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 9999px;
+  background: var(--ie-scrollbar-thumb);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ie-scrollbar-thumb-hover);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}

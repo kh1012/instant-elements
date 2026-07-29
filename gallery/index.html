@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ko" data-instant>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>instant-elements</title>
+    <script>
+      // 첫 페인트 전에 테마를 확정한다 — React 가 마운트되길 기다리면 흰 화면이 한 번 번쩍인다.
+      (() => {
+        try {
+          const saved = localStorage.getItem("ie-theme");
+          const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          document.documentElement.dataset.theme = saved ?? (prefersDark ? "dark" : "light");
+        } catch {
+          document.documentElement.dataset.theme = "light";
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

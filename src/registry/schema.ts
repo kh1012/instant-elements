@@ -107,6 +107,39 @@ export interface RegistryIndex {
   components: IndexComponent[];
 }
 
+/**
+ * 히스토리 이벤트 — "무엇이 언제 왜 일어났나"의 append-only 기록.
+ *
+ * - `created`     최초 생성. 요청 원문이 `prompt` 에 그대로 남는다.
+ * - `modified`    코드를 실제로 고쳤을 때. `sha` 가 있으면 그 커밋이 곧 복원 지점이다.
+ * - `recommended` 신규 생성 대신 기존 컴포넌트를 추천했을 때. 코드는 안 바뀌지만 **이것만은 남긴다** —
+ *                 없으면 하네스의 존재 이유인 재사용률을 영영 잴 수 없다.
+ *
+ * 타입이 여기(node 의존 0인 계약 파일)에 사는 이유: 갤러리는 브라우저 앱이라 `node:fs` 를 끌어오는
+ * 모듈을 타입으로도 참조할 수 없다. 브라우저 경계를 넘는 타입은 전부 이 파일에 모은다.
+ */
+export type HistoryAction = "created" | "modified" | "recommended";
+
+export const HISTORY_ACTIONS: HistoryAction[] = ["created", "modified", "recommended"];
+
+export interface HistoryEvent {
+  /** ISO 8601. 실제 시각이어야 한다. */
+  at: string;
+  /** git user.name (없으면 "unknown"). */
+  actor: string;
+  action: HistoryAction;
+  /** 요청 원문. 개행·코드펜스·URL 을 그대로 보존한다. */
+  prompt?: string;
+  /** 무엇을 했는지 한 줄 요약. */
+  note?: string;
+  /** 이 변경의 코드 커밋 SHA. 갤러리 "복원"이 가리키는 지점. */
+  sha?: string;
+}
+
+export function isHistoryAction(value: unknown): value is HistoryAction {
+  return typeof value === "string" && (HISTORY_ACTIONS as string[]).includes(value);
+}
+
 export const CATEGORIES: ElementCategory[] = ["Composite", "Animations", "System"];
 export const STATUSES: ElementStatus[] = ["draft", "stable"];
 

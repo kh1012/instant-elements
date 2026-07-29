@@ -5,6 +5,7 @@ export default defineConfig({
     index: "src/index.ts",
     config: "src/config.ts",
     tokens: "src/tokens.ts",
+    registry: "src/registry/index.ts",
     // shebang 은 src/cli.ts 첫 줄에 있고 tsup 이 그대로 보존한다.
     cli: "src/cli.ts",
   },
