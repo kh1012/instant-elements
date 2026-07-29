@@ -5,6 +5,8 @@ import { readHistory } from "../registry/history.js";
 import { isValidName } from "../registry/paths.js";
 import { listPages, readPageHistory, readSnapshot, tryReadPage } from "../page/store.js";
 import { isValidSlug } from "../page/slug.js";
+import { readFeedback } from "../page/feedback.js";
+import { previewContentOf } from "../page/preview.js";
 import { listFlows, tryReadFlow } from "../flow/store.js";
 import { readGitInfo } from "../cli/project.js";
 import { handlePageFeedback } from "./api-pages.js";
@@ -90,6 +92,10 @@ export function ieApi(config: ResolvedConfig): Plugin {
             updatedAt: page.updatedAt,
             updatedBy: page.updatedBy,
             nodes: page.data.content.length,
+            // 목록에서 "어느 페이지인지" 알아보려면 제목만으로는 부족하다 — 얕은 구조를 함께 싣는다.
+            preview: previewContentOf(page.data),
+            // 미결 피드백이 몇 건인지가 목록에서 보여야 무엇부터 열지 정할 수 있다.
+            feedback: readFeedback(config.pagesDir, page.slug).length,
           }));
           return json(res, { count: pages.length, pages });
         }

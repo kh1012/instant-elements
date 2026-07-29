@@ -14,7 +14,7 @@ import { cn } from "../lib/cn";
 import { relativeTime } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
 import { FeedbackPanel } from "../page/FeedbackPanel";
-import { FrameToggle, PageFrame } from "../page/PageFrame";
+import { FrameToggle, PageFrame, ZoomControl } from "../page/PageFrame";
 import { renderNodes } from "../page/PageRender";
 import { PageSketch, type SketchMode } from "../page/PageSketch";
 import { Link } from "../router";
@@ -37,6 +37,7 @@ export function PageRoute({ slug }: { slug: string }) {
   const state = useAsync(() => fetchPage(slug), [slug]);
   const [mode, setMode] = useState<ViewMode>("live");
   const [frameOverride, setFrameOverride] = useState<FrameId | null>(null);
+  const [zoom, setZoom] = useState(1);
   const [target, setTarget] = useState<PageNode | null>(null);
   const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
 
@@ -98,12 +99,16 @@ export function PageRoute({ slug }: { slug: string }) {
   const page = state.value;
   // 툴바의 프레임 전환은 저장하지 않는다 — 진실은 페이지 데이터(root.props.pageSize)다.
   const frame = resolveFrame(page.data.root.props["pageSize"], frameOverride);
-  const markedIds = new Set(feedback.map((item) => item.nodeId).filter((id): id is string => Boolean(id)));
+  // 패널 순서와 같은 번호를 붙인다 — "3번 피드백이 저 자리"가 눈으로 이어져야 한다.
+  const markers = new Map<string, number>();
+  feedback.forEach((item, index) => {
+    if (item.nodeId && !markers.has(item.nodeId)) markers.set(item.nodeId, index + 1);
+  });
 
   const renderOptions = {
     onNodeClick: setTarget,
     activeId: target?.props.id ?? null,
-    markedIds,
+    markers,
   };
 
   return (
@@ -139,7 +144,12 @@ export function PageRoute({ slug }: { slug: string }) {
               </button>
             ))}
           </div>
-          {mode === "live" ? <FrameToggle value={frame.id} onChange={setFrameOverride} /> : null}
+          {mode === "live" ? (
+            <>
+              <FrameToggle value={frame.id} onChange={setFrameOverride} />
+              <ZoomControl value={zoom} onChange={setZoom} />
+            </>
+          ) : null}
           <Button size="sm" onClick={state.reload}>
             새로고침
           </Button>
@@ -156,7 +166,7 @@ export function PageRoute({ slug }: { slug: string }) {
               </p>
             </div>
           ) : mode === "live" ? (
-            <PageFrame frame={frame.id}>
+            <PageFrame frame={frame.id} zoom={zoom}>
               {renderNodes(page.data.content, "column", renderOptions, true)}
             </PageFrame>
           ) : (
@@ -166,7 +176,7 @@ export function PageRoute({ slug }: { slug: string }) {
                 mode={mode}
                 onNodeClick={setTarget}
                 activeId={target?.props.id ?? null}
-                markedIds={markedIds}
+                markers={markers}
               />
             </div>
           )}

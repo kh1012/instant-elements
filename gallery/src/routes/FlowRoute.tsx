@@ -158,7 +158,8 @@ export function FlowRoute({ slug }: { slug: string }) {
                 },
                 activeId: null,
                 // 연결된 자리를 표시한다 — 시연 중 "어디를 누르면 되나"를 물어보지 않아도 되게.
-                markedIds: hint ? new Set(exits.keys()) : new Set(),
+                // 번호는 순서 의미가 없으므로 모두 같은 값을 준다(존재 자체가 신호다).
+                markers: hint ? new Map([...exits.keys()].map((id) => [id, 0])) : new Map(),
               },
               true,
             )}

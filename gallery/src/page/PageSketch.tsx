@@ -34,14 +34,14 @@ export function PageSketch({
   depth = 0,
   onNodeClick,
   activeId,
-  markedIds,
+  markers,
 }: {
   nodes: PageNode[];
   mode: SketchMode;
   depth?: number;
   onNodeClick?: (node: PageNode) => void;
   activeId?: string | null;
-  markedIds?: Set<string>;
+  markers?: Map<string, number>;
 }) {
   return (
     <ul className={cn("flex flex-col gap-1", depth > 0 && "ml-4 border-l border-st-border pl-3")}>
@@ -63,11 +63,16 @@ export function PageSketch({
                     : "border-st-border bg-st-card text-st-foreground",
                   onNodeClick && "hover:border-st-primary/60",
                   activeId === id && "border-st-primary ring-1 ring-st-primary",
-                  id && markedIds?.has(id) && "border-dashed border-st-info",
+                  id && markers?.has(id) && "border-dashed border-st-info",
                 )}
               >
                 <span className="font-mono">{describe(node, mode)}</span>
                 {id ? <span className="ml-2 opacity-50">{id}</span> : null}
+                {id && markers?.has(id) ? (
+                  <span className="ml-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-st-info px-1 text-[10px] font-medium text-st-background">
+                    {markers.get(id)}
+                  </span>
+                ) : null}
               </button>
               {items.length > 0 ? (
                 <PageSketch
@@ -76,7 +81,7 @@ export function PageSketch({
                   depth={depth + 1}
                   {...(onNodeClick ? { onNodeClick } : {})}
                   {...(activeId !== undefined ? { activeId } : {})}
-                  {...(markedIds ? { markedIds } : {})}
+                  {...(markers ? { markers } : {})}
                 />
               ) : null}
             </li>

@@ -1,6 +1,7 @@
 import galleryConfig from "virtual:ie/config";
 import entries from "virtual:ie/entries";
 import { Button } from "./components/Button";
+import { CommandPalette } from "./components/CommandPalette";
 import { cn } from "./lib/cn";
 import { DetailRoute } from "./routes/DetailRoute";
 import { LibraryRoute } from "./routes/LibraryRoute";
@@ -52,12 +53,17 @@ export function App() {
         </div>
 
         <div className="flex items-center gap-2">
+          <span className="hidden text-step-n2 text-st-muted-foreground sm:inline">
+            <kbd className="rounded-sm border border-st-border bg-st-muted px-1 py-0.5">⌘K</kbd> 로 찾기
+          </span>
           <span className="text-step-n2 text-st-muted-foreground">{entries.length}개</span>
           <Button size="sm" onClick={toggle}>
             {theme === "dark" ? "라이트" : "다크"}
           </Button>
         </div>
       </header>
+
+      <CommandPalette />
 
       <main key={path} className="anim-fade-up">
         {detail?.[1] ? (

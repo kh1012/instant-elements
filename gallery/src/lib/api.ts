@@ -7,6 +7,13 @@ import type { PageData, PageHistoryEvent } from "instant-elements/page";
  * 필요할 때 가져온다.
  */
 
+export interface PreviewNode {
+  type: string;
+  id?: string;
+  cols?: number;
+  items?: PreviewNode[];
+}
+
 export interface PageSummary {
   slug: string;
   title: string;
@@ -14,6 +21,10 @@ export interface PageSummary {
   updatedAt: string;
   updatedBy: string;
   nodes: number;
+  /** 목록 썸네일이 그릴 얕은 구조. */
+  preview: PreviewNode[];
+  /** 미결 피드백 건수. */
+  feedback: number;
 }
 
 export interface PageDetail {

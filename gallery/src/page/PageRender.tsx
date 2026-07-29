@@ -174,8 +174,8 @@ export interface RenderOptions {
   onNodeClick?: (node: PageNode) => void;
   /** 지금 강조할 노드 id. */
   activeId?: string | null;
-  /** 피드백이 달린 노드 id 들. */
-  markedIds?: Set<string>;
+  /** 피드백이 달린 노드 id → 목록에서의 번호. 번호가 있어야 패널의 몇 번 항목인지 이어진다. */
+  markers?: Map<string, number>;
 }
 
 export function renderNodes(
@@ -250,7 +250,7 @@ function RenderNode({
         "relative",
         clickable && "cursor-pointer outline-offset-2 hover:outline-2 hover:outline-st-primary/50",
         options.activeId === id && "outline-2 outline-st-primary",
-        id && options.markedIds?.has(id) && "outline-2 outline-dashed outline-st-info",
+        id && options.markers?.has(id) && "outline-2 outline-dashed outline-st-info",
       )}
       onClick={
         clickable
@@ -262,6 +262,13 @@ function RenderNode({
           : undefined
       }
     >
+      {/* 번호 마커 — 미리보기의 이 자리가 패널의 몇 번 피드백인지 눈으로 잇는다.
+          점선 테두리만으로는 "무언가 달렸다"까지만 알 수 있다. */}
+      {id && (options.markers?.get(id) ?? 0) > 0 ? (
+        <span className="pointer-events-none absolute -left-2 -top-2 z-10 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-st-info px-1 text-step-n2 font-medium text-st-background shadow-sm">
+          {options.markers?.get(id)}
+        </span>
+      ) : null}
       <NodeBoundary label={node.props._label ?? node.type}>{inner}</NodeBoundary>
     </Tag>
   );

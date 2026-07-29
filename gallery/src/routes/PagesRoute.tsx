@@ -2,6 +2,7 @@ import { fetchPages } from "../lib/api";
 import { relativeTime } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
 import { Link } from "../router";
+import { PageThumb } from "../page/PageThumb";
 
 export function PagesRoute() {
   const state = useAsync(fetchPages, []);
@@ -33,13 +34,27 @@ export function PagesRoute() {
             <li key={page.slug}>
               <Link
                 to={`/pages/${encodeURIComponent(page.slug)}`}
-                className="press flex flex-col gap-1.5 rounded-lg border border-st-border bg-st-card p-4 hover:-translate-y-1 hover:shadow-lg"
+                className="press relative flex flex-col gap-2.5 rounded-lg border border-st-border bg-st-card p-4 hover:-translate-y-1 hover:shadow-lg"
               >
-                <span className="text-step-0 font-medium">{page.title || page.slug}</span>
-                <span className="text-step-n2 text-st-muted-foreground">
-                  v{page.version} · 최상위 {page.nodes}개 · {page.updatedBy || "알 수 없음"}
-                  {page.updatedAt ? ` · ${relativeTime(page.updatedAt)}` : ""}
-                </span>
+                {/* 미결 피드백 건수 — 목록에서 무엇부터 열지 정하는 신호다. */}
+                {page.feedback > 0 ? (
+                  <span
+                    className="absolute -right-1.5 -top-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-st-warning px-1 text-step-n2 font-medium text-st-background"
+                    title={`반영되지 않은 피드백 ${page.feedback}건`}
+                  >
+                    {page.feedback}
+                  </span>
+                ) : null}
+
+                <PageThumb nodes={page.preview} />
+
+                <div className="flex flex-col gap-1">
+                  <span className="text-step-0 font-medium">{page.title || page.slug}</span>
+                  <span className="text-step-n2 text-st-muted-foreground">
+                    v{page.version} · 최상위 {page.nodes}개 · {page.updatedBy || "알 수 없음"}
+                    {page.updatedAt ? ` · ${relativeTime(page.updatedAt)}` : ""}
+                  </span>
+                </div>
               </Link>
             </li>
           ))}

@@ -31,9 +31,16 @@ const ACTION_LABEL: Record<HistoryEvent["action"], string> = {
 
 export function DetailRoute({ name }: { name: string }) {
   const pins = usePins();
-  const entry = entries.find((e) => e.name === name);
+  const index = entries.findIndex((e) => e.name === name);
+  const entry = index >= 0 ? entries[index] : undefined;
   if (!entry) return <NotFound name={name} />;
   const pinned = pins.includes(entry.name);
+
+  // 쓰이는 곳 — composedOf 의 역방향. 이 하네스의 목적이 재사용이라, "이게 어디서 쓰이나"를
+  // 못 보면 고쳐도 되는지 판단할 수 없다(고치면 무엇이 함께 흔들리는지 모른다).
+  const usedBy = entries.filter((e) => e.meta.composedOf?.includes(entry.name));
+  const prev = entries[index - 1];
+  const next = entries[index + 1];
 
   const ctx: PromptContext = {
     importAlias: galleryConfig.importAlias,
@@ -60,6 +67,20 @@ export function DetailRoute({ name }: { name: string }) {
           <p className="mt-1.5 max-w-2xl text-step-n1 text-st-muted-foreground">
             {entry.meta.summary}
           </p>
+          {/* 목록으로 돌아가지 않고 옆 컴포넌트로 — 훑어볼 때 왕복이 절반으로 준다. */}
+          <div className="mt-2 flex items-center gap-2 text-step-n2">
+            {prev ? (
+              <Link to={`/c/${prev.name}`} className="press text-st-muted-foreground hover:text-st-foreground">
+                ← {prev.name}
+              </Link>
+            ) : null}
+            {prev && next ? <span className="text-st-border">·</span> : null}
+            {next ? (
+              <Link to={`/c/${next.name}`} className="press text-st-muted-foreground hover:text-st-foreground">
+                {next.name} →
+              </Link>
+            ) : null}
+          </div>
         </div>
 
         {/*
@@ -164,6 +185,21 @@ export function DetailRoute({ name }: { name: string }) {
                     className="press rounded-sm bg-st-muted px-1.5 py-0.5 text-step-n2 hover:bg-st-interactive-muted-hover-bg"
                   >
                     {child}
+                  </Link>
+                ))}
+              </span>
+            </Meta>
+          ) : null}
+          {usedBy.length > 0 ? (
+            <Meta label="쓰이는 곳">
+              <span className="flex flex-wrap gap-1.5">
+                {usedBy.map((parent) => (
+                  <Link
+                    key={parent.name}
+                    to={`/c/${parent.name}`}
+                    className="press rounded-sm bg-st-muted px-1.5 py-0.5 text-step-n2 hover:bg-st-interactive-muted-hover-bg"
+                  >
+                    {parent.name}
                   </Link>
                 ))}
               </span>

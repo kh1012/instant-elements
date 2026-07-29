@@ -2,7 +2,10 @@ import type { Entry } from "instant-elements/registry";
 import { Link } from "../router";
 import { isNew } from "../lib/search";
 import { togglePin } from "../lib/pins";
-import { StarIcon } from "./icons";
+import { CopyIcon, StarIcon } from "./icons";
+import { CopyButton } from "./CopyButton";
+import { buildIntegrationPrompt } from "../lib/prompt";
+import galleryConfig from "virtual:ie/config";
 import { Tooltip } from "./Tooltip";
 import { CategoryBadge, NewBadge, StatusBadge } from "./StatusBadge";
 import { SafePreview } from "./SafePreview";
@@ -24,6 +27,27 @@ export function ComponentCard({ entry, pinned = false }: { entry: Entry; pinned?
       className="press group relative flex flex-col overflow-hidden rounded-lg border border-st-border bg-st-card hover:-translate-y-1 hover:shadow-lg"
     >
       {/* 카드 전체가 링크라 별표 클릭이 이동으로 새지 않게 전파를 끊는다. */}
+      {/* 카드에서 바로 복사 — 가져다 쓰려는 사람은 상세를 열 이유가 없다. */}
+      <span
+        className="absolute left-2 top-2 z-10 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        }}
+      >
+        <CopyButton
+          icon={<CopyIcon width={14} height={14} />}
+          label={`${entry.name} 통합 프롬프트 복사`}
+          copiedLabel="복사됨"
+          tooltip="다른 화면에 이 컴포넌트를 가져다 쓰라고 시킨다"
+          className="h-7 w-7 bg-st-card/80 backdrop-blur"
+          text={buildIntegrationPrompt(entry, {
+            importAlias: galleryConfig.importAlias,
+            baseUrl: `http://${galleryConfig.host}:${galleryConfig.port}`,
+          })}
+        />
+      </span>
+
       <span
         className="absolute right-2 top-2 z-10"
         onClick={(event) => {
