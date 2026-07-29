@@ -3,6 +3,7 @@ import type { Entry } from "instant-elements/registry";
 import {
   buildIntegrationPrompt,
   buildModifyPrompt,
+  buildSplitPrompt,
   buildUsageExample,
   componentNameOf,
   importPathFor,
@@ -122,5 +123,34 @@ describe("수정 프롬프트", () => {
 
   it("데모도 함께 맞추라고 지시한다 — 카드가 그 파일을 그린다", () => {
     expect(buildModifyPrompt(entry(), ctx)).toContain("*.demo.tsx");
+  });
+});
+
+describe("분할 프롬프트", () => {
+  it("수정과 다른 결과물을 요구한다 — 조각을 만들고 원본을 조립체로 바꾼다", () => {
+    const prompt = buildSplitPrompt(entry(), ctx);
+    expect(prompt).toContain("ie element new");
+    expect(prompt).toContain("composedOf");
+    expect(prompt).toContain("Composite");
+  });
+
+  it("공개 API 를 지키라고 못 박는다 — 소비처를 고쳐야 하면 분할이 아니라 파괴다", () => {
+    expect(buildSplitPrompt(entry(), ctx)).toContain("공개 API");
+  });
+
+  it("쪼개는 것 자체가 목적이 아님을 알린다 — 이르면 멈추라고 지시한다", () => {
+    const prompt = buildSplitPrompt(entry(), ctx);
+    expect(prompt).toContain("멈추고");
+    expect(prompt).toContain("쪼개는 것 자체가 목적이 아니다");
+  });
+
+  it("이미 조립된 조각이 있으면 거기에 더하라고 안내한다", () => {
+    const withParts = buildSplitPrompt(entry({ composedOf: ["badge", "avatar"] }), ctx);
+    expect(withParts).toContain("badge, avatar");
+    expect(buildSplitPrompt(entry(), ctx)).toContain("아직 단일 컴포넌트");
+  });
+
+  it("기록 절차를 함께 싣는다", () => {
+    expect(buildSplitPrompt(entry(), ctx)).toContain("ie element log stat-card --action modified");
   });
 });

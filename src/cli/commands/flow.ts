@@ -6,6 +6,9 @@ import type { ResolvedConfig } from "../../config/types.js";
 import { createFlow, listFlows, readFlow, writeFlow } from "../../flow/store.js";
 import { checkFlowIntegrity } from "../../flow/schema.js";
 import { readPage } from "../../page/store.js";
+import { validatePageData } from "../../page/validate.js";
+import { buildIndex } from "../../registry/index-file.js";
+import { listEntryNames } from "../../registry/entry.js";
 import type { PageNode } from "../../page/schema.js";
 import { CliError, color, emitJson, info, ok, warn } from "../ui.js";
 
@@ -139,21 +142,57 @@ async function runLink(ctx: CommandContext): Promise<void> {
   ok(`${fromSlug}/${nodeId} → ${to}`);
 }
 
+/**
+ * 흐름 정합성 + **편입된 페이지 각각의 구조**를 함께 본다.
+ *
+ * 흐름은 자기가 가리키는 페이지만큼만 정확할 수 있다. 특히 **id 중복**은 흐름 쪽에서 보이지
+ * 않는다 — 연결이 가리키는 id 가 실재하므로 흐름 검사는 통과하지만, 그 id 를 가진 노드가 둘이라
+ * 시연에서 어느 쪽이 눌린 것인지 알 수 없다. 그래서 페이지 검사를 여기서 함께 돌린다.
+ */
 async function runCheck(ctx: CommandContext): Promise<void> {
   const config = await loadConfig(ctx);
   const slug = requireSlug(ctx, "ie flow check <flow>");
   const flow = readFlow(config.flowsDir, slug);
 
+  const index = buildIndex({
+    root: config.root,
+    elementsDir: config.elementsDir,
+    entriesDir: config.entriesDir,
+    indexFile: config.indexFile,
+  });
+  const pageOptions = {
+    knownComponents: new Set(
+      listEntryNames({ elementsDir: config.elementsDir, entriesDir: config.entriesDir }),
+    ),
+    renderableComponents: new Set(index.components.filter((c) => c.hasDemo).map((c) => c.name)),
+  };
+
   const nodeIdsByScreen: Record<string, Set<string>> = {};
+  const issues = [...checkFlowIntegrity(flow, {})];
+
   for (const screen of flow.screens) {
+    let page;
     try {
-      nodeIdsByScreen[screen.slug] = collectNodeIds(readPage(config.pagesDir, screen.slug).data.content);
+      page = readPage(config.pagesDir, screen.slug);
     } catch {
-      // 페이지가 사라졌으면 노드 검사를 건너뛴다 — 그 사실 자체는 아래 정합성 검사가 잡는다.
+      issues.push({ level: "error", message: `화면 파일을 읽지 못했습니다: ${screen.slug}` });
+      continue;
+    }
+    nodeIdsByScreen[screen.slug] = collectNodeIds(page.data.content);
+
+    for (const issue of validatePageData(page.data, pageOptions)) {
+      issues.push({
+        level: issue.level,
+        message: `[${screen.slug}] ${issue.path} — ${issue.message}`,
+      });
     }
   }
 
-  const issues = checkFlowIntegrity(flow, nodeIdsByScreen);
+  // 노드 존재 검사는 페이지를 다 읽은 뒤에 해야 정확하다.
+  for (const issue of checkFlowIntegrity(flow, nodeIdsByScreen)) {
+    if (!issues.some((existing) => existing.message === issue.message)) issues.push(issue);
+  }
+
   const errors = issues.filter((i) => i.level === "error");
 
   if (flagBool(ctx.args.flags, "json")) {
@@ -166,11 +205,15 @@ async function runCheck(ctx: CommandContext): Promise<void> {
     info(`  ${mark} ${issue.message}`);
   }
   if (errors.length > 0) {
-    warn(`오류 ${errors.length}건 — 시연 중 넘어가지 않는 자리가 있습니다.`);
+    warn(`오류 ${errors.length}건 — 시연이 의도대로 돌지 않습니다.`);
     process.exitCode = 1;
     return;
   }
-  ok(issues.length === 0 ? "정합성 통과" : `경고 ${issues.length}건 (오류 없음)`);
+  ok(
+    issues.length === 0
+      ? `정합성 통과 · 화면 ${flow.screens.length}개 구조까지 확인`
+      : `경고 ${issues.length}건 (오류 없음)`,
+  );
 }
 
 export const flowCommand = defineCommand({
@@ -181,7 +224,7 @@ export const flowCommand = defineCommand({
     'create "<이름>"     빈 흐름 생성',
     "add <flow>         --screen <page-slug>   화면 편입(그 시점 버전으로 박제)",
     "link <flow>        --from <page:node> --to <page> [--action <prop>] [--value <arg>]",
-    "check <flow>       사라진 노드·닿지 않는 화면을 미리 잡는다",
+    "check <flow>       흐름 정합성 + 편입된 각 화면의 구조까지 검사한다",
   ],
   async run(ctx) {
     switch (ctx.args.positionals[0]) {

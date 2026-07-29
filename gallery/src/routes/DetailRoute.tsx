@@ -8,9 +8,11 @@ import { DemoFrame } from "../components/DemoFrame";
 import { SafePreview } from "../components/SafePreview";
 import { CategoryBadge, StatusBadge } from "../components/StatusBadge";
 import { formatAt, relativeTime } from "../lib/format";
+import { CopyIcon, SplitIcon, WandIcon } from "../components/icons";
 import {
   buildIntegrationPrompt,
   buildModifyPrompt,
+  buildSplitPrompt,
   buildUsageExample,
   componentNameOf,
   importPathFor,
@@ -55,14 +57,34 @@ export function DetailRoute({ name }: { name: string }) {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        {/*
+          프롬프트 3종은 '이 컴포넌트로 무엇을 시킬 것인가' 라는 같은 축의 변형이라 한 덩어리로
+          묶고 아이콘으로 가른다. 라벨 3개를 늘어놓으면 줄을 다 먹고, 케밥에 넣으면 묻힌다.
+          툴팁에는 이름이 아니라 **용도**를 적는다 — 이름만으로는 무엇이 다른지 여전히 모른다.
+          _근거: 상류 하네스 23f4ff6b0 · 5a5b5098b._
+        */}
+        <div className="flex items-center gap-0.5 rounded-md border border-st-border bg-st-card p-0.5">
           <CopyButton
-            variant="primary"
-            label="프롬프트 복사"
+            icon={<CopyIcon />}
+            label="통합 프롬프트 복사"
             copiedLabel="복사됨"
+            tooltip="다른 화면에 이 컴포넌트를 가져다 쓰라고 시킨다"
             text={buildIntegrationPrompt(entry, ctx)}
           />
-          <CopyButton label="수정 프롬프트" text={buildModifyPrompt(entry, ctx)} />
+          <CopyButton
+            icon={<WandIcon />}
+            label="수정 프롬프트 복사"
+            copiedLabel="복사됨"
+            tooltip="이 컴포넌트 자체를 고치라고 시킨다 (요청사항만 적으면 된다)"
+            text={buildModifyPrompt(entry, ctx)}
+          />
+          <CopyButton
+            icon={<SplitIcon />}
+            label="분할 프롬프트 복사"
+            copiedLabel="복사됨"
+            tooltip="너무 커진 이 컴포넌트를 조각으로 쪼개 다시 조립하라고 시킨다"
+            text={buildSplitPrompt(entry, ctx)}
+          />
         </div>
       </header>
 
