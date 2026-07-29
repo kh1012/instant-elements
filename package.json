@@ -1,0 +1,28 @@
+{
+  "name": "instant-elements",
+  "version": "0.0.1",
+  "publishConfig": {
+    "access": "public"
+  },
+  "description": "Instant UI elements — build interfaces on the fly.",
+  "keywords": [
+    "ui",
+    "instant",
+    "elements",
+    "components",
+    "interface"
+  ],
+  "license": "MIT",
+  "author": "kh1012",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kh1012/instant-ui.git"
+  },
+  "homepage": "https://github.com/kh1012/instant-ui#readme",
+  "bugs": {
+    "url": "https://github.com/kh1012/instant-ui/issues"
+  },
+  "files": [
+    "README.md"
+  ]
+}
