@@ -11,6 +11,7 @@ import { buildIndex } from "../../registry/index-file.js";
 import { isCategory, isStatus } from "../../registry/schema.js";
 import { applySchema, computeSchema } from "../../schema/apply.js";
 import { validateRegistry } from "../../validate/index.js";
+import { listRestorePoints, restoreElement } from "../../restore/index.js";
 import { listEntryNames } from "../../registry/entry.js";
 import { CliError, color, emitJson, info, ok, warn } from "../ui.js";
 
@@ -333,6 +334,49 @@ async function runValidate(ctx: CommandContext): Promise<void> {
   ok(`${result.checked}개 검사 · 통과`);
 }
 
+/**
+ * 과거 시점으로 되돌린다 — 히스토리에 남긴 sha 가 여기서 쓰인다.
+ *
+ * 인자 없이 부르면 되돌릴 수 있는 시점 목록을 보여 준다. 되돌리기는 되돌릴 수 없는 작업이
+ * 아니다 — 결과가 새 커밋으로 남으므로 그것마저 되돌릴 수 있다.
+ */
+async function runRestore(ctx: CommandContext): Promise<void> {
+  const config = await loadConfig(ctx);
+  const name = ctx.args.positionals[1];
+  if (!name) {
+    throw new CliError("컴포넌트 이름이 필요합니다.", {
+      exitCode: 64,
+      hint: "ie element restore <name> [--to <sha>]",
+    });
+  }
+
+  const points = listRestorePoints(config, name);
+  const to = flagString(ctx.args.flags, "to");
+
+  if (!to) {
+    if (flagBool(ctx.args.flags, "json")) return emitJson({ name, points });
+    if (points.length === 0) {
+      warn(`${name} 에 복원 지점이 없습니다.`);
+      info(`  ${color.dim("`ie element log <name> --sha $(git rev-parse HEAD)` 로 남긴 시점만 되돌릴 수 있습니다.")}`);
+      return;
+    }
+    info(`  ${color.bold(name)} 복원 지점 ${points.length}개`);
+    for (const point of points) {
+      info(`    ${color.cyan(point.sha.slice(0, 7))}  ${color.dim(point.at)}  ${point.note ?? ""}`);
+    }
+    info("");
+    info(`  ${color.dim(`ie element restore ${name} --to <sha>`)}`);
+    return;
+  }
+
+  const result = restoreElement(config, name, to, actorOf(config.root));
+
+  if (flagBool(ctx.args.flags, "json")) return emitJson(result);
+  ok(`${name} · ${to.slice(0, 7)} 시점으로 복원`);
+  for (const file of result.files) info(`  ${color.dim(file)}`);
+  info(`  ${color.dim(`새 커밋 ${result.commit.slice(0, 7)}`)}`);
+}
+
 export const elementCommand = defineCommand({
   name: "element",
   summary: "컴포넌트를 만들고 조회하고 이력을 남긴다",
@@ -347,6 +391,7 @@ export const elementCommand = defineCommand({
     "log <name>   --action modified|recommended [--note …] [--prompt-file …] [--sha …]",
     "schema [name] TS Props 타입에서 props 스키마를 추출해 엔트리에 백필 [--check] [--json]",
     "validate [name]  하드룰 검증 게이트 [--animation-strict] [--json]",
+    "restore <name>   복원 지점 목록 · --to <sha> 로 그 시점으로 되돌린다",
   ],
   async run(ctx) {
     const sub = ctx.args.positionals[0];
@@ -363,10 +408,12 @@ export const elementCommand = defineCommand({
         return runSchema(ctx);
       case "validate":
         return runValidate(ctx);
+      case "restore":
+        return runRestore(ctx);
       default:
         throw new CliError(`알 수 없는 하위 명령: ${sub ?? "(없음)"}`, {
           exitCode: 64,
-          hint: "사용 가능: new · list · get · log · schema · validate — `ie help element` 로 상세 도움말.",
+          hint: "사용 가능: new · list · get · log · schema · validate · restore",
         });
     }
   },
