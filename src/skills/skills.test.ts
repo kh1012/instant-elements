@@ -49,10 +49,25 @@ describe("배포되는 스킬", () => {
     expect(guide).toContain("경로를 하드코딩하지 않는다");
   });
 
-  it("정본에 딥링크 검증 게이트가 있다 — SPA 는 없는 이름에도 200 을 준다", () => {
+  it("정본이 딥링크 검증을 단일 명령으로 시킨다 — 손으로 curl 하면 위양성을 못 피한다", () => {
     const guide = readFileSync(join(shippedSkillDir("element-create"), "GUIDE.md"), "utf8");
-    expect(guide).toContain("/api/entry/");
+    expect(guide).toContain("ie gallery status");
     expect(guide).toContain("미검증");
+    // 같은 포트를 다른 프로젝트 갤러리가 점유하면 흔한 이름(button·card)에 200 이 온다.
+    // 그 함정을 명시하지 않으면 에이전트가 다시 손으로 curl 한다.
+    expect(guide).toContain("위양성");
+  });
+
+  it("page-create 정본도 갤러리 신원 확인을 먼저 시킨다", () => {
+    const guide = readFileSync(join(shippedSkillDir("page-create"), "GUIDE.md"), "utf8");
+    expect(guide).toContain("ie gallery status");
+    expect(guide).toContain("미검증");
+  });
+
+  it("page-create 정본이 저장 전 구조 검증을 알린다", () => {
+    const guide = readFileSync(join(shippedSkillDir("page-create"), "GUIDE.md"), "utf8");
+    expect(guide).toContain("ie page check");
+    expect(guide).toContain("종료코드 65");
   });
 
   it("정본이 재사용 추천도 기록하라고 지시한다 — 없으면 재사용률을 잴 수 없다", () => {

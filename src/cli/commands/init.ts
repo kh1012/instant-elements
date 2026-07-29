@@ -85,10 +85,12 @@ export const initCommand = defineCommand({
       skipped.push(rel(config.indexFile));
     }
 
+    // `@source` 는 **그 CSS 파일이 있는 디렉토리** 기준으로 해석된다. 프로젝트 루트 기준으로
+    // 안내하면 CSS 를 src/ 안에 둔 흔한 배치에서 그대로 틀린다.
     const cssHint = [
       '@import "tailwindcss";',
       '@import "instant-elements/theme.css";',
-      `@source "./${rel(config.elementsDir)}";`,
+      `@source "<이 CSS 파일에서 ${rel(config.elementsDir)} 까지의 상대경로>";`,
     ];
 
     if (flagBool(args.flags, "json")) {
@@ -105,6 +107,9 @@ export const initCommand = defineCommand({
     info("");
     info(`  ${color.dim("1.")} Tailwind 진입 CSS 에 토큰을 연결하세요:`);
     for (const line of cssHint) info(`       ${color.cyan(line)}`);
+    info(
+      `       ${color.dim(`예) CSS 가 src/styles.css 라면  @source "./${rel(config.elementsDir).replace(/^src\//, "")}";`)}`,
+    );
     info("");
     info(`  ${color.dim("2.")} 앱 루트에 스코프 속성을 붙이세요:`);
     info(`       ${color.cyan('<html data-instant data-theme="light">')}`);

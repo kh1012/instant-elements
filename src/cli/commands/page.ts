@@ -5,6 +5,7 @@ import { readGitInfo } from "../project.js";
 import { resolveConfig } from "../../config/resolve.js";
 import type { ResolvedConfig } from "../../config/types.js";
 import { buildIndex } from "../../registry/index-file.js";
+import { tryReadEntry } from "../../registry/entry.js";
 import {
   createPage,
   listPages,
@@ -16,8 +17,10 @@ import {
 } from "../../page/store.js";
 import { emptyPageData, type PageData } from "../../page/schema.js";
 import { isBumpKind } from "../../page/version.js";
+import { pageErrors, validatePageData, type PageIssue } from "../../page/validate.js";
+import { listEntryNames } from "../../registry/entry.js";
 import { isPageHistoryAction } from "../../page/schema.js";
-import { CliError, color, emitJson, info, ok } from "../ui.js";
+import { CliError, color, emitJson, info, ok, warn } from "../ui.js";
 
 async function loadConfig(ctx: CommandContext): Promise<ResolvedConfig> {
   const configFile = flagString(ctx.args.flags, "config");
@@ -109,6 +112,58 @@ async function runCreate(ctx: CommandContext): Promise<void> {
   );
 }
 
+/** 레지스트리에서 알려진 이름과 렌더 가능한 이름을 모은다. */
+function componentSets(config: ResolvedConfig) {
+  const index = buildIndex({
+    root: config.root,
+    elementsDir: config.elementsDir,
+    entriesDir: config.entriesDir,
+    indexFile: config.indexFile,
+  });
+  return {
+    knownComponents: new Set(listEntryNames({
+      elementsDir: config.elementsDir,
+      entriesDir: config.entriesDir,
+    })),
+    renderableComponents: new Set(index.components.filter((c) => c.hasDemo).map((c) => c.name)),
+  };
+}
+
+function printIssues(issues: PageIssue[]): void {
+  for (const issue of issues) {
+    const mark = issue.level === "error" ? color.red("✗") : color.yellow("!");
+    info(`  ${mark} ${color.dim(issue.path)}  ${issue.message}`);
+    if (issue.hint) info(`      ${color.dim(issue.hint)}`);
+  }
+}
+
+async function runCheck(ctx: CommandContext): Promise<void> {
+  const config = await loadConfig(ctx);
+  const slug = requireSlug(ctx, "ie page check <slug>");
+  const page = readPage(config.pagesDir, slug);
+  const issues = validatePageData(page.data, componentSets(config));
+  const errors = pageErrors(issues);
+
+  if (flagBool(ctx.args.flags, "json")) {
+    emitJson({ slug, issues, ok: errors.length === 0 });
+    process.exitCode = errors.length === 0 ? 0 : 1;
+    return;
+  }
+  printIssues(issues);
+  if (errors.length > 0) {
+    if (issues.length > 0) info("");
+    warn(`오류 ${errors.length}건 · 경고 ${issues.length - errors.length}건`);
+    process.exitCode = 1;
+    return;
+  }
+  if (issues.length > 0) {
+    info("");
+    warn(`경고 ${issues.length}건 (오류 없음)`);
+    return;
+  }
+  ok("페이지 구조 통과");
+}
+
 async function runSet(ctx: CommandContext): Promise<void> {
   const config = await loadConfig(ctx);
   const slug = requireSlug(ctx, 'ie page set <slug> <file.json> --base <version> --note "…"');
@@ -151,6 +206,19 @@ async function runSet(ctx: CommandContext): Promise<void> {
       exitCode: 64,
     });
   }
+
+  // 저장 전에 구조를 검증한다 — 통과 못 한 데이터를 저장하고 딥링크까지 주면,
+  // 화면이 조용히 비어 있는 것을 사람이 나중에 발견하게 된다.
+  const issues = validatePageData(parsed.data, componentSets(config));
+  const errors = pageErrors(issues);
+  if (errors.length > 0 && !flagBool(ctx.args.flags, "force")) {
+    printIssues(issues);
+    throw new CliError(`페이지 구조 오류 ${errors.length}건 — 저장하지 않았습니다.`, {
+      exitCode: 65,
+      hint: "고친 뒤 다시 저장하세요. 정말 이대로 저장하려면 --force.",
+    });
+  }
+  if (issues.length > 0) printIssues(issues);
 
   const result = savePage(storeOptions(config), {
     slug,
@@ -226,7 +294,19 @@ async function runCatalog(ctx: CommandContext): Promise<void> {
   });
 
   const all = flagBool(ctx.args.flags, "all");
-  const components = all ? index.components : index.components.filter((c) => c.hasDemo);
+  const filtered = all ? index.components : index.components.filter((c) => c.hasDemo);
+
+  // props 를 함께 싣는다 — GUIDE 가 "props 를 채우는 게 정상 경로" 라고 지시하는데,
+  // 목록에 없으면 컴포넌트마다 `ie element get` 을 따로 불러야 한다.
+  const dirs = { elementsDir: config.elementsDir, entriesDir: config.entriesDir };
+  const components = filtered.map((component) => {
+    const entry = tryReadEntry(dirs, component.name);
+    return {
+      ...component,
+      props: entry?.meta.props ?? [],
+      exportName: entry?.meta.exportName ?? null,
+    };
+  });
 
   if (flagBool(ctx.args.flags, "json") || !flagBool(ctx.args.flags, "pretty")) {
     emitJson({ count: components.length, components });
@@ -247,6 +327,7 @@ export const pageCommand = defineCommand({
     "set <slug> <file>     --base <version> [--bump patch|minor|major]",
     '                      [--action edited|refined] [--note "한 일"]',
     "                      --base 가 최신과 다르면 종료코드 4 로 거부합니다(덮어쓰기 금지).",
+    "check <slug>          구조 검증(id 유일·items·알려진 컴포넌트)",
     "history <slug>        편집 이력(최신순)",
     "versions <slug>       스냅샷 목록 · --at <version> 으로 그 시점 내용",
     "catalog [--all]       조립 가능 컴포넌트(기본 = 데모 보유 = 렌더 가능)",
@@ -262,6 +343,8 @@ export const pageCommand = defineCommand({
         return runCreate(ctx);
       case "set":
         return runSet(ctx);
+      case "check":
+        return runCheck(ctx);
       case "history":
         return runHistory(ctx);
       case "versions":
@@ -271,7 +354,7 @@ export const pageCommand = defineCommand({
       default:
         throw new CliError(`알 수 없는 하위 명령: ${sub ?? "(없음)"}`, {
           exitCode: 64,
-          hint: "사용 가능: list · get · create · set · history · versions · catalog",
+          hint: "사용 가능: list · get · create · set · check · history · versions · catalog",
         });
     }
   },
