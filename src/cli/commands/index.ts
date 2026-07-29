@@ -2,6 +2,7 @@ import type { Command } from "../command.js";
 import { configCommand } from "./config.js";
 import { doctorCommand } from "./doctor.js";
 import { elementCommand } from "./element.js";
+import { flowCommand } from "./flow.js";
 import { galleryCommand } from "./gallery.js";
 import { guideCommand } from "./guide.js";
 import { indexCommand } from "./index-cmd.js";
@@ -15,6 +16,7 @@ export const commands: Command[] = [
   skillsCommand,
   elementCommand,
   pageCommand,
+  flowCommand,
   galleryCommand,
   indexCommand,
   guideCommand,

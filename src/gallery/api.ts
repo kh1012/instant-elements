@@ -3,8 +3,9 @@ import type { ResolvedConfig } from "../config/types.js";
 import { listEntryNames, tryReadEntry } from "../registry/entry.js";
 import { readHistory } from "../registry/history.js";
 import { isValidName } from "../registry/paths.js";
-import { listPages, readPageHistory, tryReadPage } from "../page/store.js";
+import { listPages, readPageHistory, readSnapshot, tryReadPage } from "../page/store.js";
 import { isValidSlug } from "../page/slug.js";
+import { listFlows, tryReadFlow } from "../flow/store.js";
 import { readGitInfo } from "../cli/project.js";
 import { handlePageFeedback } from "./api-pages.js";
 import { packageVersion } from "../pkg.js";
@@ -113,6 +114,40 @@ export function ieApi(config: ResolvedConfig): Plugin {
             data: page.data,
             history: readPageHistory(config.pagesDir, slug),
           });
+        }
+
+        // ── 흐름
+        if (path === "/api/flows" && req.method === "GET") {
+          const flows = listFlows(config.flowsDir).map((flow) => ({
+            slug: flow.slug,
+            name: flow.name,
+            screens: flow.screens.length,
+            edges: flow.edges.length,
+            updatedAt: flow.updatedAt,
+          }));
+          return json(res, { count: flows.length, flows });
+        }
+
+        if (path.startsWith("/api/flows/") && req.method === "GET") {
+          const slug = decodeURIComponent(path.slice("/api/flows/".length));
+          if (!isValidSlug(slug)) return json(res, { error: "invalid slug" }, 400);
+          const flow = tryReadFlow(config.flowsDir, slug);
+          if (!flow) return json(res, { slug, exists: false }, 404);
+
+          // 편입 시점에 박제한 스냅샷을 함께 싣는다 — 시연은 그 버전으로 돌아야 한다.
+          const screens = flow.screens.map((screen) => {
+            const snapshot = readSnapshot(config.pagesDir, screen.slug, screen.version);
+            const live = snapshot ? null : tryReadPage(config.pagesDir, screen.slug);
+            return {
+              slug: screen.slug,
+              version: screen.version,
+              title: snapshot?.title ?? live?.title ?? screen.slug,
+              data: snapshot?.data ?? live?.data ?? null,
+              /** 스냅샷이 없어 최신본으로 대체했는가 — 시연이 흔들릴 수 있다는 신호. */
+              stale: !snapshot,
+            };
+          });
+          return json(res, { slug, exists: true, flow, screens });
         }
 
         return json(res, { error: "not found" }, 404);

@@ -4,6 +4,8 @@ import { Button } from "./components/Button";
 import { cn } from "./lib/cn";
 import { DetailRoute } from "./routes/DetailRoute";
 import { LibraryRoute } from "./routes/LibraryRoute";
+import { FlowRoute } from "./routes/FlowRoute";
+import { FlowsRoute } from "./routes/FlowsRoute";
 import { PageRoute } from "./routes/PageRoute";
 import { PagesRoute } from "./routes/PagesRoute";
 import { Link, safeDecode, usePath } from "./router";
@@ -12,6 +14,7 @@ import { useTheme } from "./theme";
 const NAV = [
   { to: "/", label: "라이브러리", match: (path: string) => path === "/" || path.startsWith("/c/") },
   { to: "/pages", label: "페이지", match: (path: string) => path.startsWith("/pages") },
+  { to: "/flows", label: "흐름", match: (path: string) => path.startsWith("/flows") },
 ];
 
 export function App() {
@@ -20,6 +23,7 @@ export function App() {
 
   const detail = /^\/c\/(.+)$/.exec(path);
   const page = /^\/pages\/(.+)$/.exec(path);
+  const flow = /^\/flows\/(.+)$/.exec(path);
 
   return (
     <div className="min-h-full bg-st-background text-st-foreground">
@@ -60,8 +64,12 @@ export function App() {
           <DetailRoute name={safeDecode(detail[1])} />
         ) : page?.[1] ? (
           <PageRoute slug={safeDecode(page[1])} />
+        ) : flow?.[1] ? (
+          <FlowRoute slug={safeDecode(flow[1])} />
         ) : path.startsWith("/pages") ? (
           <PagesRoute />
+        ) : path.startsWith("/flows") ? (
+          <FlowsRoute />
         ) : (
           <LibraryRoute />
         )}
