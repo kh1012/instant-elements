@@ -16,6 +16,8 @@ export const DEFAULTS = {
   tokens: { css: "instant-elements/theme.css" },
   gallery: { port: 9221, host: "127.0.0.1", open: false },
   validate: { colorLiterals: true, arbitraryValues: true, animation: true },
+  // 아직 실제 마켓플레이스가 없다 — Phase B(웹 서비스)가 배포되면 여기 실제 URL/client id로 교체한다.
+  publish: { url: "https://registry.instant-elements.dev", oauthClientId: "instant-elements-cli" },
 } as const satisfies Required<Omit<InstantElementsConfig, "gallery">> & {
   gallery: { port: number; host: string; open: boolean };
 };

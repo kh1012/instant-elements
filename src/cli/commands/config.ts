@@ -65,6 +65,7 @@ export const configCommand = defineCommand({
           .map(([k, v]) => `${k}=${v ? "on" : "off"}`)
           .join(" · "),
       },
+      { label: "publish", display: config.publish.url },
     ];
 
     const width = Math.max(...rows.map((r) => r.label.length));

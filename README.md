@@ -77,6 +77,8 @@ There is a working consumer project in [`examples/vite-react`](./examples/vite-r
 | `ie element schema` | Extracts props from your TS types into the entry (`--check` for CI) |
 | `ie element validate` | Hard-rule gate (`--animation-strict`) |
 | `ie element restore <name>` | Rolls a component back to a past commit (`--to <sha>`) |
+| `ie login` | Logs in with GitHub (Device Flow) so `ie publish` can identify you |
+| `ie publish <name>` | Publishes a component to the marketplace as `<githubLogin>/<name>` |
 | `ie page create/get/set` | Page assembly with optimistic concurrency |
 | `ie page check <slug>` | Structural check — unique ids, `items`, known components |
 | `ie page catalog` | Components that can render in a page, with their props schema |

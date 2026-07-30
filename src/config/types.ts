@@ -44,6 +44,17 @@ export interface ValidateOptions {
   animation?: boolean;
 }
 
+/**
+ * `publish` 로 이름 지은 이유: 이미 `registryDir`/`entriesDir` 가 **로컬** 레지스트리 저장소를
+ * 가리키고 있어, 마켓플레이스(원격) 설정에 "registry" 를 또 쓰면 둘이 헷갈린다.
+ */
+export interface PublishOptions {
+  /** `ie publish`/`ie login` 이 통신하는 마켓플레이스 API 베이스 URL. */
+  url?: string;
+  /** GitHub OAuth App client id — `ie login` 의 Device Flow 에 쓴다. */
+  oauthClientId?: string;
+}
+
 export interface InstantElementsConfig {
   /**
    * 생성된 컴포넌트 3파일(`<name>.tsx` · `<name>.demo.tsx` · `index.ts`)이 사는 디렉토리.
@@ -64,6 +75,7 @@ export interface InstantElementsConfig {
   tokens?: TokenOptions;
   gallery?: GalleryOptions;
   validate?: ValidateOptions;
+  publish?: PublishOptions;
 }
 
 /**
@@ -84,4 +96,5 @@ export interface ResolvedConfig {
   tokens: { css: string };
   gallery: Required<Omit<GalleryOptions, "title">> & { title: string };
   validate: Required<ValidateOptions>;
+  publish: Required<PublishOptions>;
 }

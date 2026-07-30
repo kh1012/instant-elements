@@ -94,5 +94,9 @@ export async function resolveConfig(options: ResolveOptions = {}): Promise<Resol
       arbitraryValues: input.validateArbitraryValues ?? DEFAULTS.validate.arbitraryValues,
       animation: input.validateAnimation ?? DEFAULTS.validate.animation,
     },
+    publish: {
+      url: input.publishUrl ?? DEFAULTS.publish.url,
+      oauthClientId: input.publishOauthClientId ?? DEFAULTS.publish.oauthClientId,
+    },
   };
 }

@@ -41,6 +41,7 @@ const KNOWN_KEYS = new Set([
   "tokens",
   "gallery",
   "validate",
+  "publish",
 ]);
 
 export interface NormalizedInput {
@@ -57,6 +58,8 @@ export interface NormalizedInput {
   validateColorLiterals?: boolean;
   validateArbitraryValues?: boolean;
   validateAnimation?: boolean;
+  publishUrl?: string;
+  publishOauthClientId?: string;
 }
 
 /** 원시 설정 객체를 검증하고 평평한 중간 형태로 정규화한다(기본값 병합은 resolve 가 한다). */
@@ -138,6 +141,23 @@ export function validateConfig(raw: unknown, source: string): NormalizedInput {
       if (v[key] === undefined) continue;
       if (typeof v[key] !== "boolean") fail(`validate.${key} 는 boolean 이어야 합니다.`);
       out[target] = v[key];
+    }
+  }
+
+  const publish = input["publish"];
+  if (publish !== undefined) {
+    if (typeof publish !== "object" || publish === null || Array.isArray(publish))
+      fail("publish 는 객체여야 합니다.", '예: { url: "https://registry.example.com" }');
+    const p = publish as Record<string, unknown>;
+    if (p["url"] !== undefined) {
+      if (typeof p["url"] !== "string" || p["url"].trim() === "")
+        fail("publish.url 은 비어 있지 않은 문자열이어야 합니다.");
+      out.publishUrl = p["url"].trim().replace(/\/+$/, "");
+    }
+    if (p["oauthClientId"] !== undefined) {
+      if (typeof p["oauthClientId"] !== "string" || p["oauthClientId"].trim() === "")
+        fail("publish.oauthClientId 는 비어 있지 않은 문자열이어야 합니다.");
+      out.publishOauthClientId = p["oauthClientId"].trim();
     }
   }
 
