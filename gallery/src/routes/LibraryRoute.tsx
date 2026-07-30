@@ -132,8 +132,8 @@ export function LibraryRoute() {
                 고정됨 <span className="opacity-70">{pinnedItems.length}</span>
               </h2>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {pinnedItems.map((entry) => (
-                  <ComponentCard key={entry.name} entry={entry} pinned />
+                {pinnedItems.map((entry, i) => (
+                  <ComponentCard key={entry.name} entry={entry} index={i} pinned />
                 ))}
               </div>
             </section>
@@ -147,8 +147,8 @@ export function LibraryRoute() {
                 </h2>
               ) : null}
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {restItems.map((entry) => (
-                  <ComponentCard key={entry.name} entry={entry} />
+                {restItems.map((entry, i) => (
+                  <ComponentCard key={entry.name} entry={entry} index={i} />
                 ))}
               </div>
             </section>

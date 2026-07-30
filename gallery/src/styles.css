@@ -81,15 +81,70 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* 상호작용 표면 공통 — 색·그림자·변형이 한 곡선으로 움직이게 한다. */
+/*
+ * ── 모션 토큰
+ *
+ * 이징과 지속시간을 이름으로 고정한다. 값을 각 컴포넌트에 흩으면 같은 성격의 움직임이 조금씩
+ * 다른 속도로 굴러 화면 전체의 리듬이 어긋난다.
+ *
+ * "자연스러움"은 스프링이 아니라 **진입-빠름 / 복귀-느림 비대칭**에서 나온다(hover-lift 참고).
+ *
+ * _근거: 상류 하네스 styles.motion.css._
+ */
+:root {
+  --ease-crisp: cubic-bezier(0.2, 0, 0, 1); /* 마이크로: hover 색·press·리프트 진입 */
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1); /* 닫힘·퇴장 */
+
+  --dur-instant: 90ms; /* hover 틴트·focus */
+  --dur-fast: 140ms; /* press·칩 토글·리프트 진입 */
+  --dur-base: 200ms; /* 팝오버 진입·세그먼트 슬라이드 */
+  --dur-slow: 280ms; /* 리프트 복귀(비대칭 감쇠)·라우트 fade */
+  --dur-slower: 420ms; /* 그리드 stagger·히어로 fade-up */
+}
+
+/*
+ * 상호작용 표면 공통. `transition-colors` 대신 이걸 쓰면 색·그림자·변형이 한 곡선으로 움직인다.
+ * 마이크로 인터랙션이라 짧고 크리스프하게(140ms · ease-crisp).
+ */
 .press {
   transition-property: color, background-color, border-color, box-shadow, transform, opacity;
-  transition-duration: 200ms;
-  transition-timing-function: var(--ease-smooth);
+  transition-duration: var(--dur-fast);
+  transition-timing-function: var(--ease-crisp);
 }
 
 .press:active {
   transform: translateY(1px);
+}
+
+/*
+ * 카드·행 공통 depth 리프트.
+ *
+ * 진입은 빠르고(fast·crisp) 복귀는 길게(slow·smooth) 나눠 스프링 없이 감쇠감을 만든다.
+ * 이동량은 2px로 절제한다 — 더 들면 목록 전체가 출렁인다.
+ *
+ * hover 가능한 포인터에서만 적용한다. 터치에서는 :hover 가 탭 후 눌러붙어(sticky) 카드가
+ * 들린 채로 남는다.
+ *
+ * ⚠️ `position: fixed` 팝오버를 자식으로 여는 표면에는 쓰지 않는다 — transform 이
+ * containing block 을 만들어 앵커가 틀어진다.
+ */
+.hover-lift {
+  transition-property: transform, box-shadow, border-color;
+  transition-duration: var(--dur-slow);
+  transition-timing-function: var(--ease-smooth);
+}
+
+@media (hover: hover) {
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    transition-duration: var(--dur-fast);
+    transition-timing-function: var(--ease-crisp);
+  }
+}
+
+.hover-lift:active {
+  transform: translateY(0);
+  transition-duration: var(--dur-fast);
 }
 
 @keyframes ie-fade-up {
@@ -103,8 +158,89 @@ body {
   }
 }
 
+@keyframes ie-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .anim-fade-up {
-  animation: ie-fade-up 0.42s var(--ease-smooth) both;
+  animation: ie-fade-up var(--dur-slower) var(--ease-smooth) both;
+}
+
+.anim-fade-in {
+  animation: ie-fade-in var(--dur-slow) ease-out both;
+}
+
+/*
+ * 목록 등장 stagger — 카드가 한꺼번에 나타나면 어디를 봐야 할지 모른다. 순서대로 40ms 씩
+ * 밀어 시선이 왼쪽 위부터 흐르게 한다. 12번째부터는 더 밀지 않는다(그 아래는 어차피 화면 밖이다).
+ */
+.stagger-item {
+  animation: ie-fade-up var(--dur-slower) var(--ease-smooth) both;
+  animation-delay: calc(min(var(--stagger-index, 0), 11) * 40ms);
+}
+
+/*
+ * 떠 있는 헤더가 스크롤에 따라 살짝 떠오른다. transform 을 쓰지 않아 sticky·합성이 안전하다.
+ */
+.header-elevate {
+  transition-property: box-shadow, background-color, border-color;
+  transition-duration: var(--dur-base);
+  transition-timing-function: var(--ease-smooth);
+}
+
+.header-elevate[data-scrolled="true"] {
+  box-shadow:
+    0 1px 0 0 var(--st-border),
+    0 8px 24px -16px rgb(0 0 0 / 0.24);
+}
+
+/*
+ * 투명도 축소를 요청한 사용자에게는 반투명 + backdrop-blur 헤더를 불투명 단색으로 바꾼다
+ * (가독성과 전정 부담을 함께 낮춘다).
+ */
+@media (prefers-reduced-transparency: reduce) {
+  header.header-elevate {
+    background-color: var(--st-background) !important;
+    backdrop-filter: none !important;
+  }
+}
+
+/*
+ * '신규' 배지 — 배경 원 없이 'N' 글자 자체가 배지다. 원을 두면 카드마다 색 점이 하나 더 늘어
+ * 프리뷰와 경쟁한다. 밝은 글리프 위로 유리광택이 주기적으로 한 번 스치고 나머지 구간은 쉰다.
+ */
+.new-badge > [data-glyph] {
+  background-color: color-mix(in oklch, var(--st-destructive), white 10%);
+  background-image: linear-gradient(
+    115deg,
+    transparent 42%,
+    rgb(255 255 255 / 0.92) 50%,
+    transparent 58%
+  );
+  background-repeat: no-repeat;
+  background-size: 220% 100%;
+  background-position: 150% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: ie-badge-glint 4.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes ie-badge-glint {
+  0%,
+  70% {
+    background-position: 150% 0;
+  }
+  85%,
+  100% {
+    background-position: -50% 0;
+  }
 }
 
 /*

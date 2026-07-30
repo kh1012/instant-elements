@@ -62,3 +62,73 @@ export function StarIcon({ filled, ...props }: SVGProps<SVGSVGElement> & { fille
     </svg>
   );
 }
+
+/** 컴포넌트 — 격자. */
+export function GridIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} width={18} height={18} {...props}>
+      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+      <rect x="14" y="3" width="7" height="7" rx="1.5" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+      <rect x="14" y="14" width="7" height="7" rx="1.5" />
+    </svg>
+  );
+}
+
+/** 페이지 — 상단 바 + 본문 영역. */
+export function PageIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} width={18} height={18} {...props}>
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M3 9h18" />
+      <path d="M9 21V9" />
+    </svg>
+  );
+}
+
+/** 흐름 — 이어진 노드. */
+export function FlowIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} width={18} height={18} {...props}>
+      <rect x="3" y="4" width="6" height="6" rx="1.5" />
+      <rect x="15" y="14" width="6" height="6" rx="1.5" />
+      <path d="M9 7h4a2 2 0 0 1 2 2v8" />
+    </svg>
+  );
+}
+
+/** 커맨드 팔레트 — ⌘ 기호 자체가 힌트다. */
+export function CommandIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} width={18} height={18} {...props}>
+      <path d="M15 6a3 3 0 1 1 3 3h-3V6zM9 6a3 3 0 1 0-3 3h3V6zM9 18a3 3 0 1 1-3-3h3v3zM15 18a3 3 0 1 0 3-3h-3v3zM9 9h6v6H9z" />
+    </svg>
+  );
+}
+
+export function SunIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} width={18} height={18} {...props}>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+    </svg>
+  );
+}
+
+export function MoonIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} width={18} height={18} {...props}>
+      <path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.5 6.5 0 0 0 9.8 9.8z" />
+    </svg>
+  );
+}
+
+/** 고정 — 핀. 채움 여부로 상태를 보인다(별보다 '꽂아 둔다'는 은유가 맞는다). */
+export function PinIcon({ filled, ...props }: SVGProps<SVGSVGElement> & { filled?: boolean }) {
+  return (
+    <svg {...base} fill={filled ? "currentColor" : "none"} {...props}>
+      <path d="M12 17v5" />
+      <path d="M9 10.8V4h6v6.8l2 3.2H7z" />
+    </svg>
+  );
+}
