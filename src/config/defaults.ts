@@ -16,9 +16,10 @@ export const DEFAULTS = {
   tokens: { css: "instant-elements/theme.css" },
   gallery: { port: 9221, host: "127.0.0.1", open: false },
   validate: { colorLiterals: true, arbitraryValues: true, animation: true },
-  // client id는 실제 GitHub OAuth App(Device Flow 활성화, kh1012 계정) 값. url은 마켓플레이스가
-  // 아직 Vercel에 배포되지 않아 플레이스홀더 — 배포되면 실제 도메인으로 교체한다.
-  publish: { url: "https://registry.instant-elements.dev", oauthClientId: "Ov23lintmmOZNVZxVRgJ" },
+  publish: {
+    url: "https://instant-elements-marketplace.vercel.app",
+    oauthClientId: "Ov23lintmmOZNVZxVRgJ",
+  },
 } as const satisfies Required<Omit<InstantElementsConfig, "gallery">> & {
   gallery: { port: number; host: string; open: boolean };
 };
