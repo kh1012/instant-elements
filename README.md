@@ -78,6 +78,7 @@ There is a working consumer project in [`examples/vite-react`](./examples/vite-r
 | `ie element schema` | Extracts props from your TS types into the entry (`--check` for CI) |
 | `ie element validate` | Hard-rule gate (`--animation-strict`) |
 | `ie element restore <name>` | Rolls a component back to a past commit (`--to <sha>`) |
+| `ie add <url>` | Pulls a marketplace component in as **your own** — source files *and* a registry entry |
 | `ie login` | Logs in with GitHub (Device Flow) so `ie publish` can identify you |
 | `ie publish <name>` | Publishes a component to the marketplace as `<githubLogin>/<name>` |
 | `ie page create/get/set` | Page assembly with optimistic concurrency |
@@ -121,6 +122,8 @@ Every path comes from here. The CLI, the gallery, and the skills all read `ie co
 **The registry is the source of truth.** One JSON entry per component holds the intent (the original request, preserved verbatim), a plain-language summary, keywords, and the props schema. `index.json` is a deterministic rollup: the same entries always produce byte-identical output, so regenerating never creates a diff.
 
 **History is append-only.** Creation, edits, and reuse recommendations each append one line. Recommendations matter — without them you cannot measure whether the harness is actually preventing duplicates, which is the entire point of it.
+
+**Installed components become yours, not dependencies.** `ie add` copies the source into your project and writes a registry entry — it does not add a package. A component in `node_modules` can't be edited by your agent, doesn't show up in your gallery, and accumulates no history; the only way to change it is to fork. So the thing you install is a starting point you own, and the entry is what makes it a first-class citizen: it shows up in reuse searches, passes the same validation gate, and records where it came from.
 
 **Skills route to one canonical guide.** What gets installed is a thin stub; the procedure is read fresh from the package on every invocation, so `npm update` is how you update your team's instructions. Drop a `.instant/skills/<name>/GUIDE.md` in your project to add your own rules on top.
 
