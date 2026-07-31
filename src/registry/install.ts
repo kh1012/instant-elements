@@ -142,6 +142,7 @@ export function installBundle(
   }
 
   // 엔트리는 **내 경로**로 다시 쓴다 — 발행자의 디렉토리 구조가 내 프로젝트와 같을 이유가 없다.
+  const installedAt = new Date().toISOString();
   const entry: Entry = {
     $schema: ENTRY_SCHEMA_URL,
     name,
@@ -150,7 +151,21 @@ export function installBundle(
     files: [{ path: rel(paths.component), type: "registry:component" }],
     meta: {
       ...bundle.meta,
-      // 만든이·만든 때는 발행자 것을 보존한다 — 내가 만든 게 아니다.
+      /*
+       * createdBy·createdAt 은 **설치자·설치 시각**이다.
+       *
+       * 발행자 것을 그대로 두면 두 가지가 어긋난다. ① 다른 모든 경로에서 createdBy 는 "이
+       * 프로젝트에서 이걸 만든 사람"인데 설치한 것만 뜻이 달라진다. ② createdAt 이 발행일이라
+       * 오늘 받아온 컴포넌트가 "새로 생김" 필터에 안 잡힌다 — 방금 설치한 걸 목록에서 못 찾는다.
+       * 크레딧은 아래 origin 이 온전히 들고 있으므로 잃는 게 없다.
+       */
+      createdBy: options.actor,
+      createdAt: installedAt,
+      origin: {
+        source: options.source,
+        ...(bundle.meta.createdBy ? { publishedBy: bundle.meta.createdBy } : {}),
+        ...(bundle.meta.createdAt ? { publishedAt: bundle.meta.createdAt } : {}),
+      },
       demo: seen.has("demo") ? rel(paths.demo) : undefined,
     },
   };
@@ -159,10 +174,12 @@ export function installBundle(
   written.push(rel(paths.entry));
 
   appendHistory(dirs, name, {
-    at: new Date().toISOString(),
+    at: installedAt,
     actor: options.actor,
     action: "created",
-    note: `마켓플레이스에서 설치 — ${options.source}`,
+    note: bundle.meta.createdBy
+      ? `@${bundle.meta.createdBy} 의 컴포넌트를 설치 — ${options.source}`
+      : `마켓플레이스에서 설치 — ${options.source}`,
   });
 
   const index = writeIndex({

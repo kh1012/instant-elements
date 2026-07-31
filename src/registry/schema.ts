@@ -80,6 +80,22 @@ export interface EntryMeta {
   animation?: unknown;
   /** 정당한 색 리터럴 예외 선언 — 주석 자율면제 대신 이 필드로만. */
   tokenExceptions?: { value: string; reason: string }[];
+  /**
+   * 밖에서 가져왔다면 어디서 왔는지(`ie add`). 직접 만든 것에는 없다.
+   *
+   * `createdBy` 를 발행자로 덮어쓰지 않고 별도 필드로 두는 이유: `createdBy` 는 다른 모든
+   * 경로에서 "이 프로젝트에서 이걸 만든 사람"을 뜻한다. 설치한 것만 다른 뜻이 되면 그 필드를
+   * 읽는 쪽이 매번 예외를 기억해야 하고, `createdAt` 도 발행일이 되어 "새로 생김" 같은 필터가
+   * 방금 받아온 것을 못 찾는다. 크레딧은 여기서 온전히 지킨다.
+   */
+  origin?: {
+    /** 받아온 주소. */
+    source: string;
+    /** 발행자(그쪽 레지스트리의 createdBy). */
+    publishedBy?: string;
+    /** 발행자가 처음 만든 시각. */
+    publishedAt?: string;
+  };
 }
 
 export interface Entry {

@@ -241,6 +241,27 @@ export function DetailRoute({ name }: { name: string }) {
           <Meta label="만든이">
             {entry.meta.createdBy} · {formatAt(entry.meta.createdAt)}
           </Meta>
+          {/* 밖에서 가져온 것이면 크레딧을 남긴다 — 이 자리에 없으면 출처가 히스토리에만 묻힌다. */}
+          {entry.meta.origin ? (
+            <Meta label="출처">
+              <span className="flex flex-col gap-0.5">
+                <span>
+                  {entry.meta.origin.publishedBy ? `@${entry.meta.origin.publishedBy}` : "마켓플레이스"}
+                  {entry.meta.origin.publishedAt
+                    ? ` · ${formatAt(entry.meta.origin.publishedAt)} 발행`
+                    : ""}
+                </span>
+                <a
+                  href={entry.meta.origin.source}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="press break-all text-step-n2 text-st-muted-foreground underline hover:text-st-foreground"
+                >
+                  {entry.meta.origin.source}
+                </a>
+              </span>
+            </Meta>
+          ) : null}
         </aside>
       </div>
     </div>

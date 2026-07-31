@@ -96,13 +96,46 @@ describe("installBundle", () => {
     expect(result.indexCount).toBe(1);
   });
 
-  it("만든이는 발행자를 보존하고, 설치 사실은 히스토리에 남긴다", async () => {
+  it("만든이·만든 때는 설치자 기준 — 다른 명령과 같은 뜻이어야 한다", async () => {
     const config = await project();
     installBundle(config, bundle(), opts);
 
-    expect(readEntry(config, "stat-card").meta.createdBy).toBe("publisher");
+    const meta = readEntry(config, "stat-card").meta;
+    expect(meta.createdBy).toBe("installer");
+    // 발행일(2026-07-01)이 아니라 방금이어야 "새로 생김" 필터가 방금 받아온 걸 찾는다.
+    expect(Date.now() - Date.parse(meta.createdAt)).toBeLessThan(10_000);
+  });
+
+  it("크레딧은 origin 에 온전히 남는다", async () => {
+    const config = await project();
+    installBundle(config, bundle(), opts);
+
+    expect(readEntry(config, "stat-card").meta.origin).toEqual({
+      source: "https://example.com/stat-card.json",
+      publishedBy: "publisher",
+      publishedAt: "2026-07-01T00:00:00.000Z",
+    });
+  });
+
+  it("직접 만든 컴포넌트에는 origin 이 없다 — 있고 없음이 곧 출처의 유무다", async () => {
+    const config = await project();
+    const { createElement } = await import("./create.js");
+    const { entry } = createElement(config, {
+      name: "mine",
+      intent: "직접 만든 것",
+      summary: "직접 만든 것",
+      createdBy: "me",
+    });
+    expect(entry.meta.origin).toBeUndefined();
+  });
+
+  it("설치 사실을 발행자와 함께 히스토리에 남긴다", async () => {
+    const config = await project();
+    installBundle(config, bundle(), opts);
+
     const history = readHistory(config, "stat-card");
     expect(history[0]?.actor).toBe("installer");
+    expect(history[0]?.note).toContain("@publisher");
     expect(history[0]?.note).toContain("https://example.com/stat-card.json");
   });
 
