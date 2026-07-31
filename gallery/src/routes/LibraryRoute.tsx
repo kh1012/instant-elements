@@ -1,12 +1,43 @@
 import { useMemo, useState } from "react";
 import entries from "virtual:ie/entries";
+import historyByName from "virtual:ie/history";
 import galleryConfig from "virtual:ie/config";
-import type { ElementCategory } from "instant-elements/registry";
+import type { ElementCategory, Entry } from "instant-elements/registry";
 import { ComponentCard } from "../components/ComponentCard";
 import { cn } from "../lib/cn";
-import { searchEntries, sortEntries, type SortKey } from "../lib/search";
+import { isNew, searchEntries, sortEntries, type SortKey } from "../lib/search";
 import { partitionByPin, usePins } from "../lib/pins";
+import { useScrollRestore } from "../lib/scroll-restore";
 import { navigate, useQuery } from "../router";
+
+/**
+ * 활동 필터 — "방금 뭘 건드렸더라"에 답한다.
+ *
+ * 로컬 개발 도구에서는 이게 분류 필터보다 자주 쓰인다. 에이전트를 몇 번 돌리고 나면 목록에서
+ * 방금 만든 것과 방금 고친 것을 다시 찾아야 하는데, 이름을 기억 못 하면 방법이 없었다.
+ */
+type Activity = "all" | "new" | "touched";
+
+const ACTIVITY_LABEL: Record<Activity, string> = {
+  all: "전체",
+  new: "새로 생김",
+  touched: "오늘 수정됨",
+};
+
+function touchedToday(entry: Entry, now: number): boolean {
+  const events = historyByName[entry.name] ?? [];
+  // 히스토리는 최신순이라 첫 항목만 보면 된다.
+  const last = events[0];
+  if (!last) return false;
+  const at = Date.parse(last.at);
+  return Number.isFinite(at) && now - at < 24 * 60 * 60 * 1000;
+}
+
+function matchesActivity(entry: Entry, activity: Activity, now: number): boolean {
+  if (activity === "new") return isNew(entry, now);
+  if (activity === "touched") return touchedToday(entry, now);
+  return true;
+}
 
 const CATEGORY_FILTERS: (ElementCategory | "all")[] = ["all", "Composite", "Animations", "System"];
 
@@ -32,12 +63,20 @@ export function LibraryRoute() {
 
   const category = params.get("category") ?? "all";
   const sort = (params.get("sort") === "recent" ? "recent" : "name") as SortKey;
+  const activityParam = params.get("activity");
+  const activity: Activity =
+    activityParam === "new" || activityParam === "touched" ? activityParam : "all";
 
   const filtered = useMemo(() => {
+    const now = Date.now();
     const byCategory =
       category === "all" ? entries : entries.filter((e) => e.meta.category === category);
-    return sortEntries(searchEntries(byCategory, query), sort);
-  }, [category, query, sort]);
+    const byActivity = byCategory.filter((e) => matchesActivity(e, activity, now));
+    return sortEntries(searchEntries(byActivity, query), sort);
+  }, [category, query, sort, activity]);
+
+  // 필터를 거는 중에는 위치를 되살리지 않는다 — 목록이 짧아져 엉뚱한 자리로 튄다.
+  useScrollRestore(query.trim() === "" && category === "all" && activity === "all");
 
   const { pinned: pinnedItems, rest: restItems } = useMemo(
     () => partitionByPin(filtered, pins, (entry) => entry.name),
@@ -100,6 +139,30 @@ export function LibraryRoute() {
         </div>
 
         <div className="flex items-center gap-1.5">
+          {(["all", "new", "touched"] as Activity[]).map((value) => {
+            // 해당하는 게 없는 필터는 아예 안 보여 준다 — 눌러서 0건을 보는 건 정보가 아니다.
+            const now = Date.now();
+            const count =
+              value === "all" ? entries.length : entries.filter((e) => matchesActivity(e, value, now)).length;
+            if (value !== "all" && count === 0) return null;
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setParam(new URLSearchParams(params), "activity", value)}
+                className={cn(
+                  "press rounded-md px-2.5 py-1 text-step-n2",
+                  activity === value
+                    ? "bg-st-muted text-st-foreground"
+                    : "text-st-muted-foreground hover:bg-st-interactive-muted-hover-bg",
+                )}
+              >
+                {ACTIVITY_LABEL[value]}
+                {value !== "all" ? <span className="ml-1.5 opacity-70">{count}</span> : null}
+              </button>
+            );
+          })}
+          <span aria-hidden className="mx-1 h-4 w-px bg-st-border" />
           {(["name", "recent"] as SortKey[]).map((value) => (
             <button
               key={value}
@@ -133,7 +196,7 @@ export function LibraryRoute() {
               </h2>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {pinnedItems.map((entry, i) => (
-                  <ComponentCard key={entry.name} entry={entry} index={i} pinned />
+                  <ComponentCard key={entry.name} entry={entry} index={i} pinned query={query} />
                 ))}
               </div>
             </section>
@@ -148,7 +211,7 @@ export function LibraryRoute() {
               ) : null}
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {restItems.map((entry, i) => (
-                  <ComponentCard key={entry.name} entry={entry} index={i} />
+                  <ComponentCard key={entry.name} entry={entry} index={i} query={query} />
                 ))}
               </div>
             </section>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Entry } from "instant-elements/registry";
-import { isNew, searchEntries, sortEntries } from "./search";
+import { findRelated, isNew, searchEntries, sortEntries, splitByMatch } from "./search";
 
 function entry(name: string, overrides: Partial<Entry["meta"]> = {}): Entry {
   return {
@@ -84,5 +84,61 @@ describe("isNew", () => {
 
   it("잘못된 시각은 새 것으로 보지 않는다", () => {
     expect(isNew(entry("x", { createdAt: "언제인지 모름" }), now)).toBe(false);
+  });
+});
+
+describe("splitByMatch", () => {
+  it("검색어에 걸린 부분만 hit 으로 가른다", () => {
+    expect(splitByMatch("stat-card", "card")).toEqual([
+      { text: "stat-", hit: false },
+      { text: "card", hit: true },
+    ]);
+  });
+
+  it("원문의 대소문자를 보존한다", () => {
+    expect(splitByMatch("StatCard", "card")).toEqual([
+      { text: "Stat", hit: false },
+      { text: "Card", hit: true },
+    ]);
+  });
+
+  it("정규식 메타문자가 와도 터지지 않는다 — 사람은 검색창에 아무거나 친다", () => {
+    expect(() => splitByMatch("a(b)c", "(b)")).not.toThrow();
+    expect(splitByMatch("a(b)c", "(b)")).toEqual([
+      { text: "a", hit: false },
+      { text: "(b)", hit: true },
+      { text: "c", hit: false },
+    ]);
+  });
+
+  it("겹치는 구간을 하나로 합친다", () => {
+    // "stat" 과 "at" 이 겹친다 — 조각이 쪼개져 나오면 하이라이트가 끊겨 보인다.
+    expect(splitByMatch("stat", "stat at")).toEqual([{ text: "stat", hit: true }]);
+  });
+
+  it("검색어가 없으면 통째로 돌려준다", () => {
+    expect(splitByMatch("stat-card", "  ")).toEqual([{ text: "stat-card", hit: false }]);
+  });
+});
+
+describe("findRelated", () => {
+  const target = entry("stat-card", { keywords: ["지표", "카드"], category: "Composite" });
+
+  it("검색어를 공유하는 것을 위로 올린다", () => {
+    const pool = [
+      target,
+      entry("metric-tile", { keywords: ["지표", "카드"], category: "Composite" }),
+      entry("nav-bar", { keywords: ["내비"], category: "Composite" }),
+    ];
+    expect(findRelated(pool, target).map((e) => e.name)).toEqual(["metric-tile"]);
+  });
+
+  it("분류만 같고 검색어가 안 겹치면 관련이라 부르지 않는다", () => {
+    const pool = [target, entry("nav-bar", { keywords: ["내비"], category: "Composite" })];
+    expect(findRelated(pool, target)).toEqual([]);
+  });
+
+  it("자기 자신은 제외한다", () => {
+    expect(findRelated([target], target)).toEqual([]);
   });
 });

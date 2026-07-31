@@ -11,6 +11,7 @@ import { formatAt, relativeTime } from "../lib/format";
 import { CopyIcon, SplitIcon, StarIcon, WandIcon } from "../components/icons";
 import { Tooltip } from "../components/Tooltip";
 import { togglePin, usePins } from "../lib/pins";
+import { findRelated } from "../lib/search";
 import { cn } from "../lib/cn";
 import {
   buildIntegrationPrompt,
@@ -40,6 +41,8 @@ export function DetailRoute({ name }: { name: string }) {
   // 쓰이는 곳 — composedOf 의 역방향. 이 하네스의 목적이 재사용이라, "이게 어디서 쓰이나"를
   // 못 보면 고쳐도 되는지 판단할 수 없다(고치면 무엇이 함께 흔들리는지 모른다).
   const usedBy = entries.filter((e) => e.meta.composedOf?.includes(entry.name));
+  // 상세가 막다른 길이 되지 않게 — 여기서 옆으로 새는 길을 열어 준다.
+  const related = findRelated(entries, entry);
   const prev = entries[index - 1];
   const next = entries[index + 1];
 
@@ -148,6 +151,24 @@ export function DetailRoute({ name }: { name: string }) {
             <h2 className="text-step-0 font-semibold">사용 예제</h2>
             <CodeBlock className="mt-2" code={buildUsageExample(entry, ctx)} />
           </section>
+
+          {related.length > 0 ? (
+            <section>
+              <h2 className="text-step-0 font-semibold">관련 컴포넌트</h2>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {related.map((item) => (
+                  <Link
+                    key={item.name}
+                    to={`/c/${item.name}`}
+                    className="press rounded-md border border-st-border bg-st-card px-2.5 py-1.5 text-step-n2 hover:border-st-ring"
+                  >
+                    <span className="font-medium">{item.name}</span>
+                    <span className="ml-1.5 text-st-muted-foreground">{item.meta.category}</span>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          ) : null}
 
           <section>
             <h2 className="text-step-0 font-semibold">

@@ -7,6 +7,7 @@ import { buildIntegrationPrompt } from "../lib/prompt";
 import { isNew } from "../lib/search";
 import { Link } from "../router";
 import { CopyButton } from "./CopyButton";
+import { Highlight } from "./Highlight";
 import { StatusBadge } from "./StatusBadge";
 import { PinIcon } from "./icons";
 import { SafePreview } from "./SafePreview";
@@ -37,11 +38,14 @@ function ComponentCardImpl({
   entry,
   index = 0,
   pinned = false,
+  query = "",
 }: {
   entry: Entry;
   /** stagger 순서. 목록에서의 위치. */
   index?: number;
   pinned?: boolean;
+  /** 지금 걸린 검색어 — 이름·설명에서 걸린 부분을 표시하는 데 쓴다. */
+  query?: string;
 }) {
   const { ref, inView } = useInView<HTMLDivElement>();
   const fresh = isNew(entry);
@@ -120,14 +124,14 @@ function ComponentCardImpl({
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between gap-2">
           <span className="min-w-0 truncate text-step-1 font-medium text-st-foreground">
-            {entry.name}
+            <Highlight text={entry.name} query={query} />
           </span>
           <div className="relative z-10 flex shrink-0 items-center gap-1.5">
             <StatusBadge status={entry.meta.status} />
           </div>
         </div>
         <p className="line-clamp-2 break-keep text-step-n1 leading-relaxed text-st-muted-foreground">
-          {entry.meta.summary || entry.meta.intent}
+          <Highlight text={entry.meta.summary || entry.meta.intent} query={query} />
         </p>
       </div>
 
