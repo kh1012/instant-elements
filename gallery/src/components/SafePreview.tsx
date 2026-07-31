@@ -45,13 +45,36 @@ function Placeholder({ message }: { message: string }) {
   );
 }
 
+/**
+ * 불러오는 동안의 뼈대.
+ *
+ * "불러오는 중…" 이라는 **글자**를 두지 않는 이유: 그 자리에 올 것은 문장이 아니라 컴포넌트다.
+ * 글자를 두면 눈이 그걸 읽으러 갔다가 사라지고, 그 다음에 실제 내용을 다시 훑어야 한다.
+ * 올 것과 닮은 회색 덩어리를 두면 시선이 한 번만 간다.
+ */
+function PreviewSkeleton() {
+  return (
+    <div
+      className="flex h-full min-h-24 w-full items-center justify-center px-4"
+      aria-label="불러오는 중"
+      aria-live="polite"
+    >
+      <div className="flex w-full max-w-56 flex-col gap-2 rounded-md border border-st-border p-3">
+        <div className="h-3.5 w-1/2 animate-pulse rounded bg-st-muted motion-reduce:animate-none" />
+        <div className="h-2.5 w-full animate-pulse rounded bg-st-muted motion-reduce:animate-none" />
+        <div className="h-2.5 w-3/4 animate-pulse rounded bg-st-muted motion-reduce:animate-none" />
+      </div>
+    </div>
+  );
+}
+
 export function SafePreview({ name }: { name: string }) {
   const Demo = lazyDemos[name];
   if (!Demo) return <Placeholder message="데모 파일이 없습니다" />;
 
   return (
     <Boundary fallback={<Placeholder message="데모를 그리지 못했습니다" />}>
-      <Suspense fallback={<Placeholder message="불러오는 중…" />}>
+      <Suspense fallback={<PreviewSkeleton />}>
         <Demo />
       </Suspense>
     </Boundary>

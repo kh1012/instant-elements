@@ -3,6 +3,7 @@ import { relativeTime } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
 import { Link } from "../router";
 import { PageThumb } from "../page/PageThumb";
+import { CardSkeleton } from "../components/CardSkeleton";
 
 export function PagesRoute() {
   const state = useAsync(fetchPages, []);
@@ -15,7 +16,7 @@ export function PagesRoute() {
       </p>
 
       {state.status === "loading" ? (
-        <p className="mt-8 text-step-n1 text-st-muted-foreground">불러오는 중…</p>
+        <CardSkeleton className="mt-8" count={6} />
       ) : state.status === "error" ? (
         <p className="mt-8 text-step-n1 text-st-destructive">{state.error}</p>
       ) : state.value.pages.length === 0 ? (

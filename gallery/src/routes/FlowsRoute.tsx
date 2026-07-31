@@ -1,6 +1,7 @@
 import { relativeTime } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
 import { Link } from "../router";
+import { CardSkeleton } from "../components/CardSkeleton";
 
 interface FlowSummary {
   slug: string;
@@ -24,7 +25,7 @@ export function FlowsRoute() {
       </p>
 
       {state.status === "loading" ? (
-        <p className="mt-8 text-step-n1 text-st-muted-foreground">불러오는 중…</p>
+        <CardSkeleton className="mt-8" count={3} />
       ) : state.status === "error" ? (
         <p className="mt-8 text-step-n1 text-st-destructive">{state.error}</p>
       ) : state.value.flows.length === 0 ? (
