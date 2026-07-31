@@ -55,6 +55,7 @@ export interface NormalizedInput {
   galleryHost?: string;
   galleryOpen?: boolean;
   galleryTitle?: string;
+  galleryAgent?: boolean;
   validateColorLiterals?: boolean;
   validateArbitraryValues?: boolean;
   validateAnimation?: boolean;
@@ -125,6 +126,10 @@ export function validateConfig(raw: unknown, source: string): NormalizedInput {
     if (g["title"] !== undefined) {
       if (typeof g["title"] !== "string") fail("gallery.title 은 문자열이어야 합니다.");
       out.galleryTitle = g["title"].trim();
+    }
+    if (g["agent"] !== undefined) {
+      if (typeof g["agent"] !== "boolean") fail("gallery.agent 는 boolean 이어야 합니다.");
+      out.galleryAgent = g["agent"];
     }
   }
 

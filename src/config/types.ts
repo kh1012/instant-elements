@@ -25,6 +25,14 @@ export interface GalleryOptions {
   open?: boolean;
   /** 갤러리 헤더에 표시할 프로젝트 이름. 기본 package.json 의 name. */
   title?: string;
+  /**
+   * 브라우저에서 코딩 에이전트를 실행하는 채널을 연다. **기본 false.**
+   *
+   * 켜면 갤러리가 `/api/agent/*` 를 서빙하고, 거기로 들어온 요청이 이 프로젝트 루트에서
+   * 실제 에이전트 프로세스를 띄운다 — 즉 **브라우저에서 로컬 파일을 고칠 수 있게 된다.**
+   * 편의만큼 표면도 열리므로 기본은 꺼 두고, 쓸 때만 `ie gallery --agent` 로 명시한다.
+   */
+  agent?: boolean;
 }
 
 export interface TokenOptions {

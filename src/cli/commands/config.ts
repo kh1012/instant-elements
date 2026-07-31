@@ -60,6 +60,12 @@ export const configCommand = defineCommand({
       { label: "gallery", display: `http://${config.gallery.host}:${config.gallery.port}` },
       { label: "gallery.title", display: config.gallery.title },
       {
+        label: "gallery.agent",
+        display: config.gallery.agent
+          ? `on ${color.dim("(브라우저에서 에이전트 실행 가능)")}`
+          : `off ${color.dim("(ie gallery --agent 로 켭니다)")}`,
+      },
+      {
         label: "validate",
         display: Object.entries(config.validate)
           .map(([k, v]) => `${k}=${v ? "on" : "off"}`)

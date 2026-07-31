@@ -14,14 +14,15 @@ export const DEFAULTS = {
   pagesDir: ".instant/pages",
   flowsDir: ".instant/flows",
   tokens: { css: "instant-elements/theme.css" },
-  gallery: { port: 9221, host: "127.0.0.1", open: false },
+  // agent 는 기본 false — 브라우저에서 로컬 파일을 고칠 수 있게 여는 표면이라 명시적으로만 켠다.
+  gallery: { port: 9221, host: "127.0.0.1", open: false, agent: false },
   validate: { colorLiterals: true, arbitraryValues: true, animation: true },
   publish: {
     url: "https://instant-elements-marketplace.vercel.app",
     oauthClientId: "Ov23lintmmOZNVZxVRgJ",
   },
 } as const satisfies Required<Omit<InstantElementsConfig, "gallery">> & {
-  gallery: { port: number; host: string; open: boolean };
+  gallery: { port: number; host: string; open: boolean; agent: boolean };
 };
 
 /** 라이브러리가 배포하는 기본 토큰 CSS 를 가리키는 스펙. 이 값이면 패키지 안에서 해석한다. */

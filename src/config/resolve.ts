@@ -88,6 +88,7 @@ export async function resolveConfig(options: ResolveOptions = {}): Promise<Resol
       host: input.galleryHost ?? DEFAULTS.gallery.host,
       open: input.galleryOpen ?? DEFAULTS.gallery.open,
       title: input.galleryTitle ?? pkg.name ?? basename(root),
+      agent: input.galleryAgent ?? DEFAULTS.gallery.agent,
     },
     validate: {
       colorLiterals: input.validateColorLiterals ?? DEFAULTS.validate.colorLiterals,
