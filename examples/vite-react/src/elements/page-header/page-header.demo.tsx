@@ -9,7 +9,11 @@ import { PageHeader } from "./page-header";
 export default function PageHeaderDemo() {
   return (
     <div className="w-72">
-      <PageHeader title="PageHeader" description="여기에 대표 상태 한 컷을 담습니다." />
+      <PageHeader
+        title="PageHeader"
+        description="여기에 대표 상태 한 컷을 담습니다."
+        align="center"
+      />
     </div>
   );
 }

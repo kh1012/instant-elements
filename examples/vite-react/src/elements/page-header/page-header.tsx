@@ -5,6 +5,8 @@ export interface PageHeaderProps {
   title?: string;
   /** 제목 아래 보조 설명. */
   description?: string;
+  /** 제목과 설명의 가로 정렬. 기본은 왼쪽. */
+  align?: "left" | "center";
   className?: string;
 }
 
@@ -16,6 +18,7 @@ export interface PageHeaderProps {
 export function PageHeader({
   title = "PageHeader",
   description,
+  align = "left",
   className,
 }: PageHeaderProps) {
   return (
@@ -23,6 +26,7 @@ export function PageHeader({
       className={cn(
         "flex flex-col gap-2 rounded-lg border border-st-border bg-st-card p-4",
         "text-st-card-foreground",
+        align === "center" ? "items-center text-center" : "items-start text-left",
         className,
       )}
     >
