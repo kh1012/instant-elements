@@ -5,7 +5,7 @@ import { readGitInfo } from "../project.js";
 import { resolveConfig } from "../../config/resolve.js";
 import type { ResolvedConfig } from "../../config/types.js";
 import { createElement } from "../../registry/create.js";
-import { listEntries, readEntry, validateEntry } from "../../registry/entry.js";
+import { listEntries, readEntry, validateEntry, writeEntry } from "../../registry/entry.js";
 import { appendHistory, isHistoryAction, readHistory } from "../../registry/history.js";
 import { buildIndex } from "../../registry/index-file.js";
 import { isCategory, isStatus } from "../../registry/schema.js";
@@ -240,6 +240,65 @@ async function runLog(ctx: CommandContext): Promise<void> {
 }
 
 /**
+ * 상태 전이. draft(기본) → stable(검증됨) → deprecated(대체됐거나 더 안 씀) 순서를 권장하지만
+ * 강제하지 않는다 — 검증 중 문제가 생겨 stable 을 다시 draft 로 내리는 것도 유효한 전이다.
+ *
+ * 히스토리는 새 액션 타입을 만들지 않고 기존 "modified" 를 재사용한다. 상태 전이도 결국
+ * "이 컴포넌트에 무슨 일이 있었나"의 한 종류라, 별도 타입을 만들면 히스토리 스키마와
+ * 갤러리 렌더링(DetailRoute)까지 같이 손대야 한다.
+ */
+async function runStatus(ctx: CommandContext): Promise<void> {
+  const config = await loadConfig(ctx);
+  const name = ctx.args.positionals[1];
+  if (!name) {
+    throw new CliError("컴포넌트 이름이 필요합니다.", {
+      exitCode: 64,
+      hint: "ie element status <name> --set draft|stable|deprecated",
+    });
+  }
+
+  const dirs = { elementsDir: config.elementsDir, entriesDir: config.entriesDir };
+  const entry = readEntry(dirs, name);
+
+  const next = flagString(ctx.args.flags, "set");
+  if (!next) {
+    throw new CliError("--set 이 필요합니다.", { exitCode: 64, hint: "draft|stable|deprecated 중 하나." });
+  }
+  if (!isStatus(next)) {
+    throw new CliError(`--set 은 draft|stable|deprecated 중 하나여야 합니다: ${next}`, { exitCode: 64 });
+  }
+
+  const previous = entry.meta.status;
+  if (previous === next) {
+    if (flagBool(ctx.args.flags, "json")) {
+      emitJson({ name, status: next, changed: false });
+      return;
+    }
+    ok(`${name} 은 이미 ${next} 상태입니다.`);
+    return;
+  }
+
+  entry.meta.status = next;
+  writeEntry(dirs, entry);
+
+  const note = flagString(ctx.args.flags, "note") || `상태 변경: ${previous} → ${next}`;
+  const event = {
+    at: new Date().toISOString(),
+    actor: actorOf(config.root),
+    action: "modified" as const,
+    note,
+  };
+  appendHistory(dirs, name, event);
+
+  if (flagBool(ctx.args.flags, "json")) {
+    emitJson({ name, status: next, previous, changed: true, event });
+    return;
+  }
+  ok(`${name} · ${previous} → ${next}`);
+  info(`  ${color.dim(note)}`);
+}
+
+/**
  * props 스키마 추출·백필.
  *
  * 이 스키마는 문서용이 아니다 — 페이지 조립이 이걸 읽어 실 컴포넌트에 값을 넘긴다. 코드와
@@ -380,7 +439,7 @@ async function runRestore(ctx: CommandContext): Promise<void> {
 export const elementCommand = defineCommand({
   name: "element",
   summary: "컴포넌트를 만들고 조회하고 이력을 남긴다",
-  usage: "ie element <new|list|get|log> [args]",
+  usage: "ie element <new|list|get|log|status> [args]",
   details: [
     "new <name>   --intent <원문> --summary <한 문장> [--category Composite|Animations|System]",
     "             [--keywords a,b] [--export-name X] [--force]",
@@ -389,6 +448,7 @@ export const elementCommand = defineCommand({
     "list         [--category X] [--status draft|stable] [--query 검색어] [--json]",
     "get <name>   엔트리 + 히스토리 + 계약 검사 [--json]",
     "log <name>   --action modified|recommended [--note …] [--prompt-file …] [--sha …]",
+    "status <name>   --set draft|stable|deprecated [--note …] [--json]",
     "schema [name] TS Props 타입에서 props 스키마를 추출해 엔트리에 백필 [--check] [--json]",
     "validate [name]  하드룰 검증 게이트 [--animation-strict] [--json]",
     "restore <name>   복원 지점 목록 · --to <sha> 로 그 시점으로 되돌린다",
@@ -404,6 +464,8 @@ export const elementCommand = defineCommand({
         return runGet(ctx);
       case "log":
         return runLog(ctx);
+      case "status":
+        return runStatus(ctx);
       case "schema":
         return runSchema(ctx);
       case "validate":
@@ -413,7 +475,7 @@ export const elementCommand = defineCommand({
       default:
         throw new CliError(`알 수 없는 하위 명령: ${sub ?? "(없음)"}`, {
           exitCode: 64,
-          hint: "사용 가능: new · list · get · log · schema · validate · restore",
+          hint: "사용 가능: new · list · get · log · status · schema · validate · restore",
         });
     }
   },

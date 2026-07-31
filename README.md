@@ -74,6 +74,7 @@ There is a working consumer project in [`examples/vite-react`](./examples/vite-r
 | `ie element list` | Finds reuse candidates (`--query`, `--category`, `--json`) |
 | `ie element get <name>` | Entry, history, and contract check |
 | `ie element log <name>` | Records an edit or a reuse recommendation (`--sha` marks a restore point) |
+| `ie element status <name>` | Moves the lifecycle status (`--set draft\|stable\|deprecated`) and logs the transition |
 | `ie element schema` | Extracts props from your TS types into the entry (`--check` for CI) |
 | `ie element validate` | Hard-rule gate (`--animation-strict`) |
 | `ie element restore <name>` | Rolls a component back to a past commit (`--to <sha>`) |
