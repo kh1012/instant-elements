@@ -144,7 +144,7 @@ export function isHistoryAction(value: unknown): value is HistoryAction {
 }
 
 export const CATEGORIES: ElementCategory[] = ["Composite", "Animations", "System"];
-export const STATUSES: ElementStatus[] = ["draft", "stable"];
+export const STATUSES: ElementStatus[] = ["draft", "stable", "deprecated"];
 
 export function isCategory(value: unknown): value is ElementCategory {
   return typeof value === "string" && (CATEGORIES as string[]).includes(value);

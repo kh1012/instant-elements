@@ -10,10 +10,11 @@
 export type ElementCategory = "Composite" | "Animations" | "System";
 
 /**
- * 라이프사이클 라벨. 승격·머지 자동화(component-curate/apply)는 이 라이브러리에 없으므로
- * 상태 전이도 없다 — 사람이 손으로 붙이는 표시일 뿐이고 갤러리 필터칩에만 쓰인다.
+ * 라이프사이클 라벨. 승격·머지를 자동으로 판단하는 로직은 없다 — `ie element status` 로
+ * 사람이 직접 바꾼다. `draft`(기본) → `stable`(검증됨) → `deprecated`(대체됐거나 더 안 씀)
+ * 순서를 권장하지만 강제하지는 않는다.
  */
-export type ElementStatus = "draft" | "stable";
+export type ElementStatus = "draft" | "stable" | "deprecated";
 
 export interface GalleryOptions {
   /** 갤러리 dev 서버 포트. 기본 9221. */
