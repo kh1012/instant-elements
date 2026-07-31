@@ -34,3 +34,10 @@ export { HISTORY_ACTIONS, appendHistory, isHistoryAction, readHistory } from "./
 
 export type { Classified } from "./io.js";
 export { appendLine, readJsonClassified, readJsonl, writeJsonAtomic } from "./io.js";
+
+/**
+ * 발행 번들 타입 — 마켓플레이스(별도 저장소)가 `/api/publish` 요청 본문을 타입으로 받으려면
+ * 여기서 export 돼야 한다. 안 그러면 같은 형태를 두 저장소가 각자 다시 정의하게 된다.
+ */
+export type { PublishBundle, PublishFile } from "./publish.js";
+export { buildPublishBundle } from "./publish.js";
