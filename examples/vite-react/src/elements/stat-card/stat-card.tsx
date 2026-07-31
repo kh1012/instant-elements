@@ -5,6 +5,8 @@ export interface StatCardProps {
   title?: string;
   /** 제목 아래 보조 설명. */
   description?: string;
+  /** 설명 아래 덧붙이는 각주. */
+  footnote?: string;
   className?: string;
 }
 
@@ -16,6 +18,7 @@ export interface StatCardProps {
 export function StatCard({
   title = "StatCard",
   description,
+  footnote,
   className,
 }: StatCardProps) {
   return (
@@ -28,6 +31,7 @@ export function StatCard({
     >
       <p className="text-step-1 font-semibold">{title}</p>
       {description ? <p className="text-step-n1 text-st-muted-foreground">{description}</p> : null}
+      {footnote ? <p className="text-step-n2 text-st-muted-foreground">{footnote}</p> : null}
     </div>
   );
 }

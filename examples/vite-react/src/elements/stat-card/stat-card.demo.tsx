@@ -9,7 +9,11 @@ import { StatCard } from "./stat-card";
 export default function StatCardDemo() {
   return (
     <div className="w-72">
-      <StatCard title="StatCard" description="여기에 대표 상태 한 컷을 담습니다." />
+      <StatCard
+        title="StatCard"
+        description="여기에 대표 상태 한 컷을 담습니다."
+        footnote="지난 7일 기준 · 매일 자정 갱신"
+      />
     </div>
   );
 }
