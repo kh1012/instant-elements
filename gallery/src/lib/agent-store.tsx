@@ -25,6 +25,8 @@ interface AgentContextValue extends AgentState {
   select(runId: string | null): void;
   setPanelOpen(open: boolean): void;
   start(input: { label: string; prompt: string; contextHref: string }): Promise<string | null>;
+  /** 끝난 실행에 턴을 이어붙인다 — 같은 대화의 다음 말. */
+  continueRun(runId: string, prompt: string): Promise<void>;
   kill(runId: string): Promise<void>;
   /** 이 화면에서 이미 돌고 있는 실행 — 중복 실행을 막는 근거. */
   runningFor(contextHref: string): AgentRun | null;
@@ -144,6 +146,19 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     return run.id;
   }, []);
 
+  const continueRun = useCallback(async (runId: string, prompt: string) => {
+    const res = await fetch(`/api/agent/continue/${encodeURIComponent(runId)}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ prompt }),
+    });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { error?: string };
+      throw new Error(body.error ?? "이어달리지 못했습니다.");
+    }
+    // 상태 갱신은 SSE 가 밀어 준다 — 여기서 낙관적으로 바꾸면 서버와 어긋날 여지만 생긴다.
+  }, []);
+
   const kill = useCallback(async (runId: string) => {
     await fetch(`/api/agent/kill/${encodeURIComponent(runId)}`, { method: "POST" });
   }, []);
@@ -155,8 +170,8 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo<AgentContextValue>(
-    () => ({ ...state, select, setPanelOpen, start, kill, runningFor }),
-    [state, select, setPanelOpen, start, kill, runningFor],
+    () => ({ ...state, select, setPanelOpen, start, continueRun, kill, runningFor }),
+    [state, select, setPanelOpen, start, continueRun, kill, runningFor],
   );
 
   return <AgentContext.Provider value={value}>{children}</AgentContext.Provider>;

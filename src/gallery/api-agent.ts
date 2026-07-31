@@ -59,10 +59,11 @@ function isSameOrigin(req: Req, config: ResolvedConfig): boolean {
 /**
  * 에이전트 실행 API — **`gallery.agent` 가 켜졌을 때만 등록된다**(src/gallery/api.ts).
  *
- * `/api/agent/runs`        GET   현재 실행 목록
- * `/api/agent/run`         POST  새 실행 시작
- * `/api/agent/kill/<id>`   POST  중단
- * `/api/agent/stream`      GET   SSE — 모든 실행의 이벤트를 한 채널로 흘린다
+ * `/api/agent/runs`          GET   현재 실행 목록
+ * `/api/agent/run`           POST  새 실행 시작
+ * `/api/agent/continue/<id>` POST  끝난 실행에 턴 이어붙이기
+ * `/api/agent/kill/<id>`     POST  중단
+ * `/api/agent/stream`        GET   SSE — 모든 실행의 이벤트를 한 채널로 흘린다
  *
  * SSE 를 실행마다 열지 않고 하나로 합치는 이유: 브라우저의 동시 연결 수는 제한돼 있고,
  * 화면은 어차피 "지금 무슨 일이 일어나는가"를 한곳에서 보여 준다. 실행 id 는 payload 에 담는다.
@@ -137,6 +138,22 @@ export function createAgentApi(config: ResolvedConfig): {
             });
             if (!result.ok) return json(res, { error: result.reason }, 409);
             json(res, { run: result.run }, 201);
+          })
+          .catch((err: unknown) => json(res, { error: String(err) }, 400));
+        return true;
+      }
+
+      const continueMatch = /^\/api\/agent\/continue\/([^/]+)$/.exec(path);
+      if (continueMatch && method === "POST") {
+        const runId = decodeURIComponent(continueMatch[1] ?? "");
+        void readBody(req)
+          .then((raw) => {
+            const prompt = (raw as { prompt?: unknown }).prompt;
+            const text = typeof prompt === "string" ? prompt.trim() : "";
+            if (!text) return json(res, { error: "prompt required" }, 400);
+            const result = store.continueRun(runId, text);
+            if (!result.ok) return json(res, { error: result.reason }, 409);
+            json(res, { run: result.run });
           })
           .catch((err: unknown) => json(res, { error: String(err) }, 400));
         return true;

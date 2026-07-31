@@ -87,9 +87,63 @@ export class AgentRunStore {
       events: [],
     };
 
+    const live: LiveRun = { run, child: null };
+    this.runs.set(id, live);
+    this.prune();
+
+    const spawned = this.spawnInto(live, input.prompt, input.sessionId);
+    if (!spawned.ok) {
+      this.runs.delete(id);
+      return spawned;
+    }
+    return { ok: true, run };
+  }
+
+  /**
+   * 끝난 실행에 턴을 이어붙인다.
+   *
+   * 새 실행을 만들지 않는 이유: 사람이 보기에 이건 **같은 대화의 다음 말**이다. run 을 새로 만들면
+   * 패널에 항목이 계속 늘어나고, 앞선 맥락을 어디서 이어받았는지가 목록에서 사라진다.
+   * CLI 쪽 맥락은 `--resume <sessionId>` 가 이어 준다 — 그래서 세션 id 를 run 에 들고 있었다.
+   */
+  continueRun(
+    runId: string,
+    prompt: string,
+  ): { ok: true; run: AgentRun } | { ok: false; reason: string } {
+    const live = this.runs.get(runId);
+    if (!live) return { ok: false, reason: "그 실행을 찾을 수 없습니다." };
+    if (live.run.status === "running") {
+      return { ok: false, reason: "아직 실행 중입니다 — 끝나면 이어서 요청하세요." };
+    }
+    if (!live.run.sessionId) {
+      return { ok: false, reason: "이어달릴 세션이 없습니다 — 새로 요청하세요." };
+    }
+    if (this.runningCount >= MAX_CONCURRENT_RUNS) {
+      return { ok: false, reason: `동시에 ${MAX_CONCURRENT_RUNS}개까지만 실행할 수 있습니다.` };
+    }
+
+    live.run.status = "running";
+    delete live.run.endedAt;
+    // 이어달린다는 것을 로그에서도 알아볼 수 있게 경계를 남긴다.
+    this.append(live, { type: "text", text: `\n— 이어서: ${prompt}\n` });
+
+    const spawned = this.spawnInto(live, prompt, live.run.sessionId);
+    if (!spawned.ok) {
+      this.finish(live, "error");
+      return spawned;
+    }
+    return { ok: true, run: live.run };
+  }
+
+  /** 프로세스를 띄우고 출력 배선을 건다. start 와 continueRun 이 공유한다. */
+  private spawnInto(
+    live: LiveRun,
+    prompt: string,
+    sessionId?: string,
+  ): { ok: true } | { ok: false; reason: string } {
     const args = claudeAdapter.buildSpawnArgs({
-      prompt: input.prompt,
-      ...(input.sessionId ? { sessionId: input.sessionId } : {}),
+      prompt,
+      ...(sessionId ? { sessionId } : {}),
     });
 
     let child: ChildProcess;
@@ -102,10 +156,7 @@ export class AgentRunStore {
     } catch (err) {
       return { ok: false, reason: `에이전트를 띄우지 못했습니다: ${String(err)}` };
     }
-
-    const live: LiveRun = { run, child };
-    this.runs.set(id, live);
-    this.prune();
+    live.child = child;
 
     const buffer = createLineBuffer();
     const consume = (chunk: Buffer): void => {
@@ -140,7 +191,7 @@ export class AgentRunStore {
       this.finish(live, code === 0 ? "done" : "error");
     });
 
-    return { ok: true, run };
+    return { ok: true };
   }
 
   /** SIGTERM 으로 정중히 요청하고, 5초 뒤에도 살아 있으면 SIGKILL. */

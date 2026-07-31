@@ -3,6 +3,7 @@ import type { AgentEvent, AgentRun } from "instant-elements/agent";
 import { useAgent } from "../lib/agent-store";
 import { cn } from "../lib/cn";
 import { relativeTime } from "../lib/format";
+import { Composer } from "./Composer";
 
 /**
  * 실행 로그 패널.
@@ -42,9 +43,12 @@ function EventLine({ event }: { event: AgentEvent }) {
 }
 
 export function RunPanel() {
-  const { enabled, runs, selectedRunId, select, panelOpen, setPanelOpen, kill } = useAgent();
+  const { enabled, runs, selectedRunId, select, panelOpen, setPanelOpen, kill, continueRun } =
+    useAgent();
   const logRef = useRef<HTMLDivElement | null>(null);
   const [stuckToBottom, setStuckToBottom] = useState(true);
+  const [followUp, setFollowUp] = useState("");
+  const [followUpError, setFollowUpError] = useState<string | null>(null);
 
   const selected = runs.find((run) => run.id === selectedRunId) ?? null;
   const eventCount = selected?.events.length ?? 0;
@@ -147,9 +151,42 @@ export function RunPanel() {
         </div>
 
         {selected ? (
-          <footer className="border-t border-st-border px-3 py-1.5 text-step-n2 text-st-muted-foreground">
-            {STATUS_LABEL[selected.status]} · 시작 {relativeTime(selected.startedAt)}
-            {selected.contextHref ? ` · ${selected.contextHref}` : ""}
+          <footer className="border-t border-st-border px-3 py-2">
+            {/*
+              끝난 실행에는 이어달릴 입력창을 준다 — 한 번 시키고 끝나는 게 아니라 "대화"가 되는
+              지점이다. 실행 중에는 입력창을 숨긴다: 큐잉해 두는 것보다 끝나고 결과를 보고 다음
+              말을 정하는 편이 실제 작업 순서에 맞는다.
+            */}
+            {selected.status === "running" ? (
+              <p className="text-step-n2 text-st-muted-foreground">
+                {STATUS_LABEL[selected.status]} · 시작 {relativeTime(selected.startedAt)}
+                {selected.contextHref ? ` · ${selected.contextHref}` : ""}
+              </p>
+            ) : (
+              <>
+                <Composer
+                  value={followUp}
+                  onChange={setFollowUp}
+                  onSubmit={() => {
+                    setFollowUpError(null);
+                    void continueRun(selected.id, followUp)
+                      .then(() => setFollowUp(""))
+                      .catch((err: unknown) =>
+                        setFollowUpError(err instanceof Error ? err.message : String(err)),
+                      );
+                  }}
+                  placeholder={
+                    selected.sessionId ? "이어서 요청하기…" : "이어달릴 세션이 없습니다"
+                  }
+                  disabled={!selected.sessionId}
+                  submitLabel="이어서"
+                  maxRows={5}
+                />
+                {followUpError ? (
+                  <p className="mt-1.5 text-step-n2 text-st-destructive">{followUpError}</p>
+                ) : null}
+              </>
+            )}
           </footer>
         ) : null}
       </div>
