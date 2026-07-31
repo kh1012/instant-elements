@@ -89,7 +89,7 @@ export function CodeBlock({
 }) {
   return (
     <div className={cn("group relative", className)}>
-      <pre className="overflow-x-auto rounded-lg border border-st-border bg-st-muted p-4 text-step-n1">
+      <pre className="overflow-x-auto rounded-lg border border-st-border bg-st-muted p-4 text-step-n2">
         <code className="font-mono">{highlight(code)}</code>
       </pre>
       {copyable ? (

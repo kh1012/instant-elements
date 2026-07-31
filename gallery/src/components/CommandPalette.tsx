@@ -1,8 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import entries from "virtual:ie/entries";
 import { cn } from "../lib/cn";
 import { searchEntries } from "../lib/search";
 import { navigate } from "../router";
+
+/** 스크롤로 이어붙이는 한 페이지 크기. 수백 개를 한 번에 렌더하지 않으면서도 8개 하드캡처럼
+ * "이 아래는 아예 못 찾는" 상태를 만들지 않는다. */
+const PAGE_SIZE = 40;
 
 /**
  * 커맨드 팔레트 (⌘K · Ctrl+K · `/`).
@@ -17,6 +21,9 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState(0);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const listRef = useRef<HTMLUListElement | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -47,10 +54,32 @@ export function CommandPalette() {
     if (open) {
       setQuery("");
       setCursor(0);
+      setVisibleCount(PAGE_SIZE);
     }
   }, [open]);
 
-  const results = useMemo(() => searchEntries(entries, query).slice(0, 8), [query]);
+  const allResults = useMemo(() => searchEntries(entries, query), [query]);
+  const results = useMemo(() => allResults.slice(0, visibleCount), [allResults, visibleCount]);
+
+  // 검색어가 바뀌면 이전 검색으로 늘려 둔 페이지를 잊고 다시 40개부터.
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [query]);
+
+  // 목록 바닥 200px 앞에 닿으면 다음 페이지를 이어붙인다.
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    const root = listRef.current;
+    if (!sentinel || !root || visibleCount >= allResults.length) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) setVisibleCount((v) => Math.min(v + PAGE_SIZE, allResults.length));
+      },
+      { root, rootMargin: "200px" },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [visibleCount, allResults.length]);
 
   if (!open) return null;
 
@@ -99,7 +128,7 @@ export function CommandPalette() {
             {entries.length === 0 ? "아직 컴포넌트가 없습니다." : "맞는 컴포넌트가 없습니다."}
           </p>
         ) : (
-          <ul className="max-h-80 overflow-y-auto py-1">
+          <ul ref={listRef} className="max-h-80 overflow-y-auto py-1">
             {results.map((entry, index) => (
               <li key={entry.name}>
                 <button
@@ -118,6 +147,9 @@ export function CommandPalette() {
                 </button>
               </li>
             ))}
+            {visibleCount < allResults.length ? (
+              <div ref={sentinelRef} aria-hidden className="h-px" />
+            ) : null}
           </ul>
         )}
 
