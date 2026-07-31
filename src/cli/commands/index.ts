@@ -1,4 +1,5 @@
 import type { Command } from "../command.js";
+import { addCommand } from "./add.js";
 import { configCommand } from "./config.js";
 import { doctorCommand } from "./doctor.js";
 import { elementCommand } from "./element.js";
@@ -17,6 +18,7 @@ export const commands: Command[] = [
   initCommand,
   skillsCommand,
   elementCommand,
+  addCommand,
   loginCommand,
   publishCommand,
   pageCommand,
