@@ -67,8 +67,11 @@ async function runStatus(
 export const galleryCommand = defineCommand({
   name: "gallery",
   summary: "컴포넌트 갤러리를 띄운다",
-  usage: "ie gallery [--port 9221] [--host 127.0.0.1] [--open]  ·  ie gallery status [name]",
+  usage:
+    "ie gallery [--port 9221] [--host 127.0.0.1] [--open] [--agent]  ·  ie gallery status [name]",
   details: [
+    "--agent        브라우저에서 코딩 에이전트를 실행하는 채널을 엽니다(기본 꺼짐).",
+    "               켜면 갤러리 화면에서 보낸 요청이 이 프로젝트의 파일을 실제로 고칩니다.",
     "status [name]  지금 뜬 갤러리가 **내 프로젝트의** 갤러리인지 먼저 확인하고,",
     "               이름을 주면 그 딥링크가 실제로 열리는지까지 확인합니다.",
     "               딥링크를 '확인됨' 이라고 말해도 되는 유일한 근거입니다.",
@@ -84,10 +87,18 @@ export const galleryCommand = defineCommand({
     const portFlag = flagString(args.flags, "port");
     const port = portFlag ? Number.parseInt(portFlag, 10) : config.gallery.port;
     const host = flagString(args.flags, "host", config.gallery.host) as string;
+    const agent = flagBool(args.flags, "agent", config.gallery.agent);
+
+    // 실제로 뜬 포트·호스트·에이전트 여부를 설정에 반영해서 넘긴다 — API 의 origin 검사와
+    // 에이전트 라우트 등록이 전부 이 값을 보므로, 플래그로 덮은 값과 어긋나면 안 된다.
+    const runtimeConfig: ResolvedConfig = {
+      ...config,
+      gallery: { ...config.gallery, port, host, agent },
+    };
 
     try {
       await startGallery({
-        config,
+        config: runtimeConfig,
         port,
         host,
         open: flagBool(args.flags, "open", config.gallery.open),
@@ -107,6 +118,12 @@ export const galleryCommand = defineCommand({
     info(`  ${color.cyan(base)}`);
     info(`  ${color.dim(`프로젝트  ${config.root}`)}`);
     info("");
+    if (agent) {
+      // 무엇이 열렸는지 모르고 켜는 일이 없게, 켠 사람에게 매번 말한다.
+      warn("에이전트 실행이 켜져 있습니다 — 이 화면에서 보낸 요청이 위 프로젝트의 파일을 실제로 고칩니다.");
+      info(`  ${color.dim("이 주소를 다른 사람과 공유하지 마세요. 끄려면 --agent 없이 다시 띄우면 됩니다.")}`);
+      info("");
+    }
     info(color.dim("  Ctrl+C 로 종료합니다."));
   },
 });

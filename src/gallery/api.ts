@@ -10,6 +10,7 @@ import { previewContentOf } from "../page/preview.js";
 import { listFlows, tryReadFlow } from "../flow/store.js";
 import { readGitInfo } from "../cli/project.js";
 import { handlePageFeedback } from "./api-pages.js";
+import { createAgentApi } from "./api-agent.js";
 import { packageVersion } from "../pkg.js";
 
 type Res = Parameters<Connect.NextHandleFunction>[1];
@@ -34,9 +35,19 @@ export function ieApi(config: ResolvedConfig): Plugin {
   // 피드백에 "누가 남겼나"를 남긴다 — 한 포트를 개발자와 검토자가 함께 쓰므로 필요하다.
   const actor = readGitInfo(config.root).userName ?? "unknown";
 
+  /**
+   * 에이전트 API 는 **켰을 때만 존재한다.** 꺼져 있으면 객체 자체를 만들지 않으므로
+   * `/api/agent/*` 는 아래 최종 404 로 떨어진다 — "있는데 막혀 있다"가 아니라 "없다".
+   */
+  const agentApi = config.gallery.agent ? createAgentApi(config) : null;
+
   return {
     name: "instant-elements:api",
     configureServer(server) {
+      if (agentApi) {
+        // dev 서버가 내려갈 때 돌던 에이전트를 남기지 않는다.
+        server.httpServer?.on("close", () => agentApi.dispose());
+      }
       server.middlewares.use((req, res, next) => {
         const url = req.url ?? "";
         if (!url.startsWith("/api/")) return next();
@@ -51,6 +62,8 @@ export function ieApi(config: ResolvedConfig): Plugin {
             root: config.root,
             registryDir: config.registryDir,
             title: config.gallery.title,
+            // 이 갤러리가 에이전트를 띄울 수 있는 상태인지 — 프런트가 실행 UI 노출 여부를 이걸로 정한다.
+            agent: config.gallery.agent,
           });
         }
 
@@ -99,6 +112,8 @@ export function ieApi(config: ResolvedConfig): Plugin {
           }));
           return json(res, { count: pages.length, pages });
         }
+
+        if (agentApi?.handle(req, res, path)) return;
 
         // 피드백은 별도 모듈로 — /api/pages/<slug> 보다 먼저 잡아야 슬러그로 오인하지 않는다.
         if (handlePageFeedback(req, res, path, config, actor)) return;
