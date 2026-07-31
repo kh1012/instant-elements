@@ -6,6 +6,7 @@ import { CopyButton } from "../components/CopyButton";
 import { cn } from "../lib/cn";
 import { relativeTime } from "../lib/format";
 import { buildFeedbackPrompt } from "../lib/page-feedback-prompt";
+import { RunNowButton } from "../components/RunNowButton";
 import type { FeedbackItem, PageDetail } from "../lib/api";
 
 type Tab = "feedback" | "history";
@@ -217,6 +218,17 @@ export function FeedbackPanel({
                   label={`반영 프롬프트 복사 (${items.length}건)`}
                   text={prompt}
                 />
+                {/*
+                  모아 둔 피드백이 곧 요청이라 따로 적을 게 없다 — 입력창 없이 바로 보낸다.
+                  에이전트가 꺼져 있으면 이 버튼은 아예 나타나지 않고 복사가 유일한 길이 된다.
+                */}
+                <RunNowButton
+                  label={page.slug}
+                  prompt={prompt}
+                  contextHref={`/pages/${page.slug}`}
+                >
+                  반영 실행
+                </RunNowButton>
                 <Button size="md" onClick={() => void onClearAll()}>
                   비우기
                 </Button>
