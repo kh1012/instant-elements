@@ -1,5 +1,7 @@
 import { AppHeader, type Section } from "./components/AppHeader";
 import { CommandPalette } from "./components/CommandPalette";
+import { RunPanel } from "./components/RunPanel";
+import { AgentProvider } from "./lib/agent-store";
 import { DetailRoute } from "./routes/DetailRoute";
 import { FlowRoute } from "./routes/FlowRoute";
 import { FlowsRoute } from "./routes/FlowsRoute";
@@ -24,25 +26,29 @@ export function App() {
       : "library";
 
   return (
-    <div className="min-h-full bg-st-background text-st-foreground">
-      <AppHeader active={section} />
-      <CommandPalette />
+    // 실행 상태는 라우트 위에 있다 — 화면을 옮겨도 돌던 실행과 SSE 연결이 끊기면 안 된다.
+    <AgentProvider>
+      <div className="min-h-full bg-st-background text-st-foreground">
+        <AppHeader active={section} />
+        <CommandPalette />
+        <RunPanel />
 
-      <main key={path} className="anim-fade-in">
-        {detail?.[1] ? (
-          <DetailRoute name={safeDecode(detail[1])} />
-        ) : page?.[1] ? (
-          <PageRoute slug={safeDecode(page[1])} />
-        ) : flow?.[1] ? (
-          <FlowRoute slug={safeDecode(flow[1])} />
-        ) : section === "pages" ? (
-          <PagesRoute />
-        ) : section === "flows" ? (
-          <FlowsRoute />
-        ) : (
-          <LibraryRoute />
-        )}
-      </main>
-    </div>
+        <main key={path} className="anim-fade-in">
+          {detail?.[1] ? (
+            <DetailRoute name={safeDecode(detail[1])} />
+          ) : page?.[1] ? (
+            <PageRoute slug={safeDecode(page[1])} />
+          ) : flow?.[1] ? (
+            <FlowRoute slug={safeDecode(flow[1])} />
+          ) : section === "pages" ? (
+            <PagesRoute />
+          ) : section === "flows" ? (
+            <FlowsRoute />
+          ) : (
+            <LibraryRoute />
+          )}
+        </main>
+      </div>
+    </AgentProvider>
   );
 }

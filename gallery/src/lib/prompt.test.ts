@@ -110,8 +110,17 @@ describe("수정 프롬프트", () => {
     expect(prompt).toContain("`packages/app/ui/gnb/`");
   });
 
-  it("요청사항을 적을 자리를 비워 둔다", () => {
-    expect(buildModifyPrompt(entry(), ctx)).toContain("## 요청사항 (여기에 적으세요)");
+  it("요청사항 없이 부르면 적을 자리를 비워 둔다 — 복사해서 밖의 LLM 에 붙여넣는 동선", () => {
+    const prompt = buildModifyPrompt(entry(), ctx);
+    expect(prompt).toContain("## 요청사항");
+    expect(prompt).toContain("(여기에 적으세요)");
+  });
+
+  it("요청사항을 주면 그 자리를 채운다 — 갤러리에서 바로 실행하는 동선", () => {
+    const prompt = buildModifyPrompt(entry(), ctx, "  여백을 gap-4 로  ");
+    expect(prompt).toContain("## 요청사항\n여백을 gap-4 로");
+    // 빈칸 안내가 남아 있으면 에이전트가 그걸 요청으로 읽는다.
+    expect(prompt).not.toContain("(여기에 적으세요)");
   });
 
   it("기록 절차를 함께 싣는다 — 고쳤는데 이력이 없는 상태를 만들지 않게", () => {

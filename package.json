@@ -56,6 +56,10 @@
     "./theme.css": "./styles/theme.css",
     "./styles/*": "./styles/*",
     "./package.json": "./package.json",
+    "./agent": {
+      "types": "./dist/agent.d.ts",
+      "import": "./dist/agent.js"
+    },
     "./page": {
       "types": "./dist/page.d.ts",
       "import": "./dist/page.js"

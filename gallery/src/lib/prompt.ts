@@ -100,11 +100,16 @@ export function buildIntegrationPrompt(entry: Entry, ctx: PromptContext): string
  * 코드 위치는 엔트리의 `files` 에서 끌어오므로, 컴포넌트가 어디에 있든 그대로 동작한다.
  * 기록 절차(`ie element log`)를 함께 실어 "고쳤는데 이력이 없는" 상태를 만들지 않는다.
  */
-export function buildModifyPrompt(entry: Entry, ctx: PromptContext): string {
+export function buildModifyPrompt(
+  entry: Entry,
+  ctx: PromptContext,
+  extraInstructions?: string,
+): string {
   const meta = entry.meta;
   const sourcePath = entry.files[0]?.path ?? "";
   const sourceDir = sourcePath.replace(/\/[^/]+$/, "");
   const props = formatProps(entry);
+  const request = extraInstructions?.trim();
 
   const lines: (string | null)[] = [
     `# 컴포넌트 수정: ${entry.name}`,
@@ -118,8 +123,10 @@ export function buildModifyPrompt(entry: Entry, ctx: PromptContext): string {
     `- 현재 역할: ${meta.intent}`,
     props ? `- props: ${props}` : null,
     "",
-    "## 요청사항 (여기에 적으세요)",
-    "> 예: 증감률을 오른쪽 정렬로 · 여백을 gap-4 로 · 강조색을 st-accent 로",
+    // 복사해서 밖의 LLM 에 붙여넣을 때는 사람이 채울 빈칸으로 남기고, 갤러리에서 직접
+    // 실행할 때는 입력한 요청을 여기에 끼워 넣는다 — 같은 프롬프트를 두 벌로 관리하지 않는다.
+    "## 요청사항",
+    request ?? "(여기에 적으세요)\n> 예: 증감률을 오른쪽 정렬로 · 여백을 gap-4 로 · 강조색을 st-accent 로",
     "",
     "## 규칙",
     `- \`${sourceDir}/\` 안에서만 수정한다.`,

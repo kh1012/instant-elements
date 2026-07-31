@@ -22,6 +22,7 @@ import {
   type PromptContext,
 } from "../lib/prompt";
 import { Link } from "../router";
+import { DetailRunControl } from "./DetailRunControl";
 
 const ACTION_LABEL: Record<HistoryEvent["action"], string> = {
   created: "생성",
@@ -131,6 +132,9 @@ export function DetailRoute({ name }: { name: string }) {
             text={buildSplitPrompt(entry, ctx)}
           />
           </div>
+
+          {/* 에이전트가 켜진 갤러리에서만 나타난다 — 꺼져 있으면 위 복사 버튼이 유일한 길이다. */}
+          <DetailRunControl entry={entry} ctx={ctx} />
         </div>
       </header>
 
