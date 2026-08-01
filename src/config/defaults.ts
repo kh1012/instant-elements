@@ -19,7 +19,14 @@ export const DEFAULTS = {
   validate: { colorLiterals: true, arbitraryValues: true, animation: true },
   publish: {
     url: "https://instant-elements-marketplace.vercel.app",
-    oauthClientId: "Ov23lintmmOZNVZxVRgJ",
+    /*
+     * 웹 로그인과 **같은** OAuth 앱을 쓴다.
+     *
+     * 한때 CLI 용을 따로 두었는데, 그러면 사람들의 GitHub 승인 목록에 비슷한 이름 둘이 뜨고
+     * 하나를 취소했을 때 다른 쪽이 왜 계속 되는지 설명할 수 없다. 앱 하나가 Device Flow(CLI)와
+     * 웹 플로우를 둘 다 지원하므로 나눌 이유가 없었다 — 서로 다른 grant type 일 뿐이다.
+     */
+    oauthClientId: "Ov23li6VR0IecaKyFgjW",
   },
 } as const satisfies Required<Omit<InstantElementsConfig, "gallery">> & {
   gallery: { port: number; host: string; open: boolean; agent: boolean };
