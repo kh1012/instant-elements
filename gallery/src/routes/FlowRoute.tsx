@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { resolveFrame, type PageData } from "instant-elements/page";
 import { Button } from "../components/Button";
+import { FlowMap } from "../components/FlowMap";
 import { cn } from "../lib/cn";
 import { useAsync } from "../lib/useAsync";
 import { PageFrame } from "../page/PageFrame";
@@ -138,7 +139,16 @@ export function FlowRoute({ slug }: { slug: string }) {
       </header>
 
       {mode === "map" ? (
-        <FlowMap detail={detail} active={active} onPick={setCurrent} />
+        <div className="mt-6">
+          <FlowMap
+            screens={detail.screens}
+            edges={detail.flow.edges}
+            start={detail.flow.start}
+            active={active}
+            onPick={setCurrent}
+            staleSlugs={new Set(detail.screens.filter((s) => s.stale).map((s) => s.slug))}
+          />
+        </div>
       ) : !screen?.data ? (
         <Centered>이 화면의 내용을 불러오지 못했습니다.</Centered>
       ) : (
@@ -170,69 +180,6 @@ export function FlowRoute({ slug }: { slug: string }) {
   );
 }
 
-/** 화면 사이 연결을 목록으로 보여 준다. 그래프 라이브러리를 들이지 않고도 구조는 읽힌다. */
-function FlowMap({
-  detail,
-  active,
-  onPick,
-}: {
-  detail: FlowDetail;
-  active: string | null;
-  onPick: (slug: string) => void;
-}) {
-  return (
-    <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {detail.screens.map((screen) => {
-        const outgoing = detail.flow.edges.filter((e) => e.from.slug === screen.slug);
-        return (
-          <button
-            key={screen.slug}
-            type="button"
-            onClick={() => onPick(screen.slug)}
-            className={cn(
-              "press flex flex-col gap-2 rounded-lg border p-4 text-left",
-              active === screen.slug
-                ? "border-st-primary bg-st-card ring-1 ring-st-primary"
-                : "border-st-border bg-st-card hover:-translate-y-1 hover:shadow-lg",
-            )}
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-step-n1 font-medium">{screen.title}</span>
-              {detail.flow.start === screen.slug ? (
-                <span className="rounded-sm bg-st-primary px-1.5 py-0.5 text-step-n2 text-st-primary-foreground">
-                  시작
-                </span>
-              ) : null}
-              {screen.stale ? (
-                <span className="rounded-sm bg-st-badge-danger-bg px-1.5 py-0.5 text-step-n2 text-st-warning">
-                  스냅샷 없음
-                </span>
-              ) : null}
-            </div>
-            <span className="text-step-n2 text-st-muted-foreground">v{screen.version}</span>
-            {outgoing.length > 0 ? (
-              <ul className="flex flex-col gap-1">
-                {outgoing.map((edge) => (
-                  <li key={edge.id} className="text-step-n2 text-st-muted-foreground">
-                    <code>{edge.from.nodeId}</code>
-                    {edge.from.action ? (
-                      <span className="text-st-info"> ·{edge.from.action}</span>
-                    ) : null}
-                    {edge.from.value ? <span className="opacity-70">={edge.from.value}</span> : null}
-                    {" → "}
-                    <span className="text-st-foreground">{edge.to}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <span className="text-step-n2 text-st-muted-foreground">나가는 연결 없음</span>
-            )}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 function Centered({ children }: { children: React.ReactNode }) {
   return <div className="mx-auto max-w-3xl px-6 py-20 text-center">{children}</div>;
