@@ -176,3 +176,12 @@ export function setFlowSettings(
 ): Promise<{ slug: string; start: string | null; frame: string | null }> {
   return send(`/api/flows/${encodeURIComponent(slug)}/settings`, "POST", input);
 }
+
+/** 이미 있는 연결의 목적지만 바꾼다 — 출발(핫스팟)은 화면 배선에서 만든다. */
+export function retargetFlowEdge(
+  slug: string,
+  id: string,
+  to: string,
+): Promise<{ slug: string; edges: unknown[] }> {
+  return send(`/api/flows/${encodeURIComponent(slug)}/edge`, "POST", { id, to });
+}

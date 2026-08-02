@@ -3,6 +3,7 @@ import { resolveFrame, type PageData } from "instant-elements/page";
 import { Button } from "../components/Button";
 import { FlowMap } from "../components/FlowMap";
 import { FlowSettings } from "./FlowRoute.settings";
+import { retargetFlowEdge } from "../lib/api";
 import { cn } from "../lib/cn";
 import { useAsync } from "../lib/useAsync";
 import { PageFrame } from "../page/PageFrame";
@@ -49,10 +50,21 @@ export function FlowRoute({ slug }: { slug: string }) {
     [slug],
   );
   const [current, setCurrent] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [pickedEdge, setPickedEdge] = useState<string | null>(null);
   const [mode, setMode] = useState<"play" | "map">("play");
   const [hint, setHint] = useState(false);
 
   const detail = state.status === "ready" ? state.value : null;
+
+  /*
+   * 렌더 밖에서 계산한다. JSX 안에서 만들면 매 렌더 새 배열이 되고, 그게 지도의 노드 메모를
+   * 무효화해 xyflow 가 노드를 재등록한다 — 그 사이 연결선이 사라지는 일이 실제로 있었다.
+   */
+  const staleSlugs = useMemo(
+    () => detail?.screens.filter((s) => s.stale).map((s) => s.slug) ?? [],
+    [detail],
+  );
   const active = current ?? detail?.flow.start ?? detail?.screens[0]?.slug ?? null;
   const screen = detail?.screens.find((s) => s.slug === active) ?? null;
 
@@ -155,14 +167,51 @@ export function FlowRoute({ slug }: { slug: string }) {
 
       {mode === "map" ? (
         <div className="mt-6">
+          {notice ? (
+            <p className="mb-2 flex items-center gap-2 text-step-n2 text-st-muted-foreground">
+              {notice}
+              <button type="button" onClick={() => setNotice(null)} className="underline">
+                닫기
+              </button>
+            </p>
+          ) : null}
           <FlowMap
             screens={detail.screens}
             edges={detail.flow.edges}
             start={detail.flow.start}
             active={active}
             onPick={setCurrent}
-            staleSlugs={new Set(detail.screens.filter((s) => s.stale).map((s) => s.slug))}
+            staleSlugs={staleSlugs}
+            onRetarget={(id, to) => {
+              // 낙관적 갱신을 하지 않는다 — 서버가 거부하면(편입 안 된 화면 등) 화면과 파일이
+              // 갈라진다. 다시 읽는 편이 한 박자 느려도 항상 맞다.
+              void retargetFlowEdge(slug, id, to).then(state.reload);
+            }}
+            onEdgeSelect={setPickedEdge}
+            onConnectAttempt={() =>
+              setNotice(
+                "지도에서는 목적지만 바꿀 수 있습니다. 새 연결은 화면에서 어느 요소를 누를지 정해야 하므로 `ie flow link` 로 만듭니다.",
+              )
+            }
           />
+
+          {/*
+            고른 연결의 목적지를 바꾼다. 지도 위 팝오버가 아니라 아래 줄에 펴 두는 이유:
+            선을 누른 손이 그대로 다음 선택으로 이어지고, 좁은 화면에서도 가려지지 않는다.
+          */}
+          {pickedEdge ? (
+            <EdgeTargetPicker
+              edge={detail.flow.edges.find((e) => e.id === pickedEdge) ?? null}
+              screens={detail.screens.map((s) => ({ slug: s.slug, title: s.title }))}
+              onClose={() => setPickedEdge(null)}
+              onPick={(to) => {
+                void retargetFlowEdge(slug, pickedEdge, to).then(() => {
+                  setPickedEdge(null);
+                  state.reload();
+                });
+              }}
+            />
+          ) : null}
         </div>
       ) : !screen?.data ? (
         <Centered>이 화면의 내용을 불러오지 못했습니다.</Centered>
@@ -198,4 +247,61 @@ export function FlowRoute({ slug }: { slug: string }) {
 
 function Centered({ children }: { children: React.ReactNode }) {
   return <div className="mx-auto max-w-3xl px-6 py-20 text-center">{children}</div>;
+}
+
+/**
+ * 고른 연결의 목적지 고르기.
+ *
+ * 지금 목적지는 눌러도 아무 일이 없어야 한다 — 같은 값으로 바꾸는 건 히스토리만 늘린다.
+ * 그래서 비활성으로 두고 "지금"이라고 적는다(숨기면 왜 없는지 모른다).
+ */
+function EdgeTargetPicker({
+  edge,
+  screens,
+  onPick,
+  onClose,
+}: {
+  edge: { id: string; from: { slug: string; nodeId: string; action?: string }; to: string } | null;
+  screens: { slug: string; title: string }[];
+  onPick: (to: string) => void;
+  onClose: () => void;
+}) {
+  if (!edge) return null;
+
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-st-border bg-st-card px-4 py-3">
+      <span className="text-step-n2 text-st-muted-foreground">
+        <code className="font-mono">{edge.from.slug}</code> 의{" "}
+        <code className="font-mono">{edge.from.nodeId}</code>
+        {edge.from.action ? ` (${edge.from.action})` : ""} →
+      </span>
+      {screens.map((screen) => {
+        const current = screen.slug === edge.to;
+        return (
+          <button
+            key={screen.slug}
+            type="button"
+            disabled={current}
+            onClick={() => onPick(screen.slug)}
+            className={cn(
+              "press rounded-full border px-3 py-1 text-step-n2",
+              current
+                ? "cursor-default border-st-primary bg-st-primary text-st-primary-foreground"
+                : "border-st-border hover:bg-st-muted/60",
+            )}
+          >
+            {screen.title}
+            {current ? " (지금)" : ""}
+          </button>
+        );
+      })}
+      <button
+        type="button"
+        onClick={onClose}
+        className="ml-auto text-step-n2 text-st-muted-foreground underline"
+      >
+        닫기
+      </button>
+    </div>
+  );
 }

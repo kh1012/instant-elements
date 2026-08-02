@@ -8,6 +8,7 @@ import { isSameOrigin, json, readBody, type Req, type Res } from "./http.js";
  * 흐름을 **고치는** API.
  *
  * `POST /api/flows/<slug>/settings` — 시작 화면·프레임.
+ * `POST /api/flows/<slug>/edge` — 이미 있는 연결의 **목적지 변경**.
  *
  * 지금까지 흐름은 CLI 로만 고칠 수 있었다. 시연 직전에 "시작을 이 화면으로 바꿔줘"가 나오면
  * 터미널로 나가야 했는데, 그건 시연 준비 중에 가장 하기 싫은 일이다.
@@ -21,7 +22,8 @@ export function createFlowEditApi(config: ResolvedConfig) {
   return {
     handle(req: Req, res: Res, path: string, actor: string): boolean {
       const settings = /^\/api\/flows\/([^/]+)\/settings$/.exec(path);
-      if (!settings) return false;
+      const edge = /^\/api\/flows\/([^/]+)\/edge$/.exec(path);
+      if (!settings && !edge) return false;
       if (req.method !== "POST") return false;
 
       if (!isSameOrigin(req)) {
@@ -29,7 +31,7 @@ export function createFlowEditApi(config: ResolvedConfig) {
         return true;
       }
 
-      const slug = decodeURIComponent(settings[1] ?? "");
+      const slug = decodeURIComponent((settings ?? edge)?.[1] ?? "");
       if (!isValidSlug(slug)) {
         json(res, { error: "invalid slug" }, 400);
         return true;
@@ -37,8 +39,35 @@ export function createFlowEditApi(config: ResolvedConfig) {
 
       void readBody(req)
         .then((body) => {
-          const input = body as { start?: unknown; frame?: unknown };
           const current = readFlow(config.flowsDir, slug);
+
+          if (edge) {
+            /*
+             * 드래그로 바꾸는 것은 **목적지뿐**이다. 출발(어느 화면의 어느 노드·어느 액션)은
+             * 썸네일에서 고를 수 없다 — 카드 안에서 어느 요소가 어느 자리인지 분간이 안 된다.
+             * 핫스팟을 새로 만드는 일은 화면 배선 라우트가 맡는다.
+             */
+            const input = body as { id?: unknown; to?: unknown };
+            if (typeof input.id !== "string" || typeof input.to !== "string") {
+              return json(res, { error: "id 와 to 가 필요합니다." }, 400);
+            }
+            if (!current.edges.some((e) => e.id === input.id)) {
+              return json(res, { error: `없는 연결입니다: ${input.id}` }, 404);
+            }
+            if (!current.screens.some((s) => s.slug === input.to)) {
+              return json(res, { error: `편입되지 않은 화면입니다: ${input.to}` }, 400);
+            }
+
+            const flow = writeFlow(store(actor), slug, (existing) => ({
+              ...existing,
+              edges: existing.edges.map((e) =>
+                e.id === input.id ? { ...e, to: input.to as string } : e,
+              ),
+            }));
+            return json(res, { slug, edges: flow.edges });
+          }
+
+          const input = body as { start?: unknown; frame?: unknown };
 
           /*
            * 시작 화면은 **편입된 화면 중 하나**여야 한다. 아무 slug 나 받으면 시연이 빈 화면에서

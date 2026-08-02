@@ -49,8 +49,37 @@ export interface FlowMapProps {
   /** 지금 보고 있는 화면 — 지도에서 강조한다. */
   active: string | null;
   onPick: (slug: string) => void;
-  /** 스냅샷이 없어 최신본으로 대체된 화면들 — 시연이 흔들릴 수 있다는 신호. */
-  staleSlugs?: Set<string>;
+  /**
+   * 핸들을 끌어 목적지를 바꿨을 때. 없으면 배선이 잠긴다(읽기 전용 지도).
+   *
+   * **목적지만** 바꾼다 — 출발은 "어느 화면의 어느 노드의 어느 액션"이라 썸네일에서 고를 수
+   * 없다. 그래서 새 연결을 만드는 게 아니라 이미 있는 연결의 끝을 옮기는 것이다.
+   */
+  onRetarget?: (edgeId: string, to: string) => void;
+  /**
+   * 핸들에서 새 연결을 끌었을 때.
+   *
+   * 지도에서는 새 연결을 만들 수 없다 — 출발이 "어느 화면의 어느 노드의 어느 액션"인데
+   * 썸네일에서는 그걸 고를 수 없기 때문이다. 그렇다고 아무 일도 안 하면 고장으로 읽히므로,
+   * **왜 안 되는지 말할 기회**를 호출자에게 넘긴다.
+   */
+  onConnectAttempt?: () => void;
+  /**
+   * 연결을 눌렀을 때.
+   *
+   * 드래그로도 목적지를 바꿀 수 있지만(위 `onRetarget`), 2px 짜리 선의 끝을 정확히 집는 건
+   * 마우스로도 성가시고 터치에서는 사실상 불가능하다. 눌러서 고르는 길을 함께 둔다.
+   */
+  onEdgeSelect?: (edgeId: string) => void;
+  /**
+   * 스냅샷이 없어 최신본으로 대체된 화면들 — 시연이 흔들릴 수 있다는 신호.
+   *
+   * **Set 이 아니라 배열로 받는다.** 호출부가 JSX 안에서 `new Set(...)` 을 만들면 렌더마다
+   * 새 객체가 되고, 그게 아래 `nodes` 메모를 매번 무효화해 xyflow 가 노드를 재등록한다 —
+   * 그 사이 엣지가 그려지지 않는 일이 실제로 있었다(선이 보였다 안 보였다 했다).
+   * 배열이면 데이터가 안 바뀌는 한 같은 참조가 유지된다.
+   */
+  staleSlugs?: string[];
 }
 
 export function FlowMap(props: FlowMapProps) {
@@ -91,6 +120,10 @@ function makeCanvas(flow: typeof import("@xyflow/react")): ComponentType<FlowMap
           active ? "border-st-primary ring-2 ring-st-primary/30" : "border-st-border",
         )}
       >
+        {/*
+          목적지 핸들만 연결을 **받는다**. 재연결(선 끝을 다른 카드로 끌기)이 여기 떨어져야
+          목적지가 바뀐다.
+        */}
         <Handle type="target" position={Position.Left} className="!size-2 !border-0 !bg-st-muted-foreground" />
         <div className="flex items-center gap-2">
           {isStart ? (
@@ -104,6 +137,10 @@ function makeCanvas(flow: typeof import("@xyflow/react")): ComponentType<FlowMap
           {outgoing > 0 ? `연결 ${outgoing}개` : "나가는 연결 없음"}
           {stale ? " · 스냅샷 없음" : ""}
         </p>
+        {/*
+          출발 핸들도 연결 가능한 채로 둔다. 새 연결을 막는 건 아래 `onConnect` 가 맡는다 —
+          핸들 단에서 막으면 재연결(선 끝을 다른 카드로 끌기)까지 함께 막힌다.
+        */}
         <Handle type="source" position={Position.Right} className="!size-2 !border-0 !bg-st-muted-foreground" />
       </div>
     );
@@ -111,8 +148,19 @@ function makeCanvas(flow: typeof import("@xyflow/react")): ComponentType<FlowMap
 
   const nodeTypes = { screen: ScreenNode };
 
-  return function Canvas({ screens, edges, start, active, onPick, staleSlugs }: FlowMapProps) {
+  return function Canvas({
+    screens,
+    edges,
+    start,
+    active,
+    onPick,
+    staleSlugs,
+    onRetarget,
+    onConnectAttempt,
+    onEdgeSelect,
+  }: FlowMapProps) {
     const known = useMemo(() => new Set(screens.map((s) => s.slug)), [screens]);
+    const staleSet = useMemo(() => new Set(staleSlugs ?? []), [staleSlugs]);
 
     const positions = useMemo(
       () => layoutScreens({ screens, edges, start }),
@@ -129,11 +177,11 @@ function makeCanvas(flow: typeof import("@xyflow/react")): ComponentType<FlowMap
             label: screen.slug,
             active: screen.slug === active,
             isStart: screen.slug === (start ?? screens[0]?.slug),
-            stale: staleSlugs?.has(screen.slug) ?? false,
+            stale: staleSet.has(screen.slug),
             outgoing: edges.filter((edge) => edge.from.slug === screen.slug).length,
           },
         })),
-      [screens, positions, active, start, edges, staleSlugs],
+      [screens, positions, active, start, edges, staleSet],
     );
 
     const rfEdges = useMemo(
@@ -160,6 +208,20 @@ function makeCanvas(flow: typeof import("@xyflow/react")): ComponentType<FlowMap
           edges={rfEdges}
           nodeTypes={nodeTypes}
           onNodeClick={(_event, node) => onPick(node.id)}
+          onEdgeClick={(_event, e) => onEdgeSelect?.(e.id)}
+          /*
+           * 이미 연결된 선의 **끝을 다른 카드로 끌어다 놓으면** 목적지가 바뀐다. xyflow 는 이
+           * 동작을 reconnect 로 부른다 — 새 연결(connect)과 달리 출발이 고정돼 있어, 우리가
+           * 허용하려는 것과 정확히 맞는다.
+           */
+          edgesReconnectable={Boolean(onRetarget)}
+          onReconnect={(oldEdge, connection) => {
+            if (!onRetarget || !connection.target) return;
+            if (connection.target === oldEdge.target) return;
+            onRetarget(oldEdge.id, connection.target);
+          }}
+          // 새 연결은 만들 수 없다 — 왜 안 되는지 말해 주는 것이 여기서 할 수 있는 최선이다.
+          onConnect={() => onConnectAttempt?.()}
           fitView
           // 한 화면짜리 흐름에서 카드가 화면을 꽉 채우지 않게 상한을 둔다.
           fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
@@ -167,7 +229,8 @@ function makeCanvas(flow: typeof import("@xyflow/react")): ComponentType<FlowMap
           maxZoom={1.5}
           // 좌표를 저장하지 않으므로 옮길 수 없게 한다 — 옮겨 봐야 새로고침이면 되돌아온다.
           nodesDraggable={false}
-          nodesConnectable={false}
+          // 재연결이 목적지 핸들에 떨어지려면 노드가 연결 가능해야 한다.
+          nodesConnectable={Boolean(onRetarget)}
           proOptions={{ hideAttribution: false }}
           translateExtent={[
             [-COL_W, -COL_W],
