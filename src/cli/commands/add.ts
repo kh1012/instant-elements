@@ -1,5 +1,6 @@
 import { flagBool, flagString } from "../args.js";
 import { defineCommand } from "../command.js";
+import { readCredentials } from "../../auth/credentials.js";
 import { resolveActorName } from "../../identity/store.js";
 import { resolveConfig } from "../../config/resolve.js";
 import { installBundle, validateBundle } from "../../registry/install.js";
@@ -46,14 +47,40 @@ export const addCommand = defineCommand({
     const config = await resolveConfig({ cwd, ...(configFile ? { configFile } : {}) });
 
     let raw: unknown;
+    let charged: string | null = null;
+    let balance: string | null = null;
     try {
-      const res = await fetch(parsed, { headers: { accept: "application/json" } });
+      /*
+       * 로그인해 두었으면 자격증명을 실어 보낸다.
+       *
+       * 마켓플레이스는 토큰 경제를 걷으므로 "누가 받아 가는가"를 알아야 한다. 브라우저 세션은
+       * 이 디스크의 파일을 못 읽으니, CLI 는 `ie login` 이 남긴 GitHub 토큰을 헤더로 보낸다.
+       *
+       * 로그인 안 했어도 **요청은 보낸다.** 게이트가 없는 주소(직접 올린 raw URL 등)도 있고,
+       * 그때 "먼저 로그인하세요"로 막으면 되던 일이 안 되게 된다. 막을지는 서버가 정한다.
+       */
+      const credentials = readCredentials();
+      const res = await fetch(parsed, {
+        headers: {
+          accept: "application/json",
+          ...(credentials ? { authorization: `Bearer ${credentials.token}` } : {}),
+        },
+      });
+
       if (!res.ok) {
-        throw new CliError(`번들을 받지 못했습니다: ${res.status}`, {
-          exitCode: 69,
-          hint: parsed.toString(),
+        // 서버가 사람이 읽을 문장을 담아 준다 — 그대로 전한다. 우리가 다시 쓰면 어긋난다.
+        const body = (await res.json().catch(() => null)) as
+          | { error?: string; hint?: string }
+          | null;
+        const known: Record<number, number> = { 401: 77, 402: 78, 403: 77 };
+        throw new CliError(body?.error ?? `번들을 받지 못했습니다: ${res.status}`, {
+          exitCode: known[res.status] ?? 69,
+          hint: body?.hint ?? parsed.toString(),
         });
       }
+
+      charged = res.headers.get("x-ie-charged");
+      balance = res.headers.get("x-ie-balance");
       raw = await res.json();
     } catch (err) {
       if (err instanceof CliError) throw err;
@@ -75,6 +102,8 @@ export const addCommand = defineCommand({
         skipped: result.skipped,
         indexCount: result.indexCount,
         gallery: `http://${config.gallery.host}:${config.gallery.port}/c/${result.entry.name}`,
+        ...(charged === null ? {} : { charged: Number(charged) }),
+        ...(balance === null ? {} : { balance: Number(balance) }),
       });
       return;
     }
@@ -88,6 +117,20 @@ export const addCommand = defineCommand({
     info(
       `  갤러리  ${color.cyan(`http://${config.gallery.host}:${config.gallery.port}/c/${result.entry.name}`)}`,
     );
+    /*
+     * 토큰이 얼마나 나갔는지 말해 준다. 조용히 깎으면 나중에 "왜 줄었지"를 물을 곳이 없다.
+     * 0 이면 이미 받은 적 있는 것이다 — 그 사실도 알려 줘야 재설치를 망설이지 않는다.
+     */
+    if (charged !== null) {
+      const spent = Number(charged);
+      info(
+        `  ${color.dim(
+          spent > 0
+            ? `토큰 ${spent} 사용 · 남은 토큰 ${balance ?? "?"}`
+            : `이미 받은 적이 있어 토큰을 쓰지 않았습니다 · 남은 토큰 ${balance ?? "?"}`,
+        )}`,
+      );
+    }
     info(`  ${color.dim("이제 내 컴포넌트입니다 — 고치고 기록하는 절차가 그대로 걸립니다.")}`);
   },
 });
