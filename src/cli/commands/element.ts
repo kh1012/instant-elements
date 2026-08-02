@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { flagBool, flagList, flagString } from "../args.js";
 import { defineCommand, type CommandContext } from "../command.js";
-import { readGitInfo } from "../project.js";
+import { resolveActorName } from "../../identity/store.js";
 import { resolveConfig } from "../../config/resolve.js";
 import type { ResolvedConfig } from "../../config/types.js";
 import { createElement } from "../../registry/create.js";
@@ -45,10 +45,6 @@ function requireText(ctx: CommandContext, key: string, why: string): string {
 async function loadConfig(ctx: CommandContext): Promise<ResolvedConfig> {
   const configFile = flagString(ctx.args.flags, "config");
   return resolveConfig({ cwd: ctx.cwd, ...(configFile ? { configFile } : {}) });
-}
-
-function actorOf(root: string): string {
-  return readGitInfo(root).userName ?? "unknown";
 }
 
 async function runNew(ctx: CommandContext): Promise<void> {
@@ -100,7 +96,7 @@ async function runNew(ctx: CommandContext): Promise<void> {
     ...(flagString(ctx.args.flags, "animation-reason")
       ? { animationReason: flagString(ctx.args.flags, "animation-reason") as string }
       : {}),
-    createdBy: actorOf(config.root),
+    createdBy: resolveActorName(config.root),
     ...(flagString(ctx.args.flags, "export-name")
       ? { exportName: flagString(ctx.args.flags, "export-name") as string }
       : {}),
@@ -222,7 +218,7 @@ async function runLog(ctx: CommandContext): Promise<void> {
 
   const event = {
     at: new Date().toISOString(),
-    actor: actorOf(config.root),
+    actor: resolveActorName(config.root),
     action,
     ...(textOption(ctx, "prompt") ? { prompt: textOption(ctx, "prompt") as string } : {}),
     ...(flagString(ctx.args.flags, "note") ? { note: flagString(ctx.args.flags, "note") as string } : {}),
@@ -284,7 +280,7 @@ async function runStatus(ctx: CommandContext): Promise<void> {
   const note = flagString(ctx.args.flags, "note") || `상태 변경: ${previous} → ${next}`;
   const event = {
     at: new Date().toISOString(),
-    actor: actorOf(config.root),
+    actor: resolveActorName(config.root),
     action: "modified" as const,
     note,
   };
@@ -428,7 +424,7 @@ async function runRestore(ctx: CommandContext): Promise<void> {
     return;
   }
 
-  const result = restoreElement(config, name, to, actorOf(config.root));
+  const result = restoreElement(config, name, to, resolveActorName(config.root));
 
   if (flagBool(ctx.args.flags, "json")) return emitJson(result);
   ok(`${name} · ${to.slice(0, 7)} 시점으로 복원`);

@@ -1,4 +1,3 @@
-import type { Connect } from "vite";
 import type { ResolvedConfig } from "../config/types.js";
 import {
   appendFeedback,
@@ -8,37 +7,7 @@ import {
   updateFeedback,
 } from "../page/feedback.js";
 import { isValidSlug } from "../page/slug.js";
-
-type Req = Parameters<Connect.NextHandleFunction>[0];
-type Res = Parameters<Connect.NextHandleFunction>[1];
-
-function json(res: Res, body: unknown, status = 200): void {
-  res.statusCode = status;
-  res.setHeader("content-type", "application/json; charset=utf-8");
-  res.end(JSON.stringify(body));
-}
-
-/** 요청 바디를 읽는다. 공유 dev 서버를 무한 바디로 죽이지 않게 상한을 둔다. */
-function readBody(req: Req, limit = 512_000): Promise<unknown> {
-  return new Promise((resolve, reject) => {
-    let body = "";
-    req.on("data", (chunk: Buffer | string) => {
-      body += chunk;
-      if (body.length > limit) {
-        reject(new Error("payload too large"));
-        req.destroy();
-      }
-    });
-    req.on("error", reject);
-    req.on("end", () => {
-      try {
-        resolve(JSON.parse(body || "{}"));
-      } catch (err) {
-        reject(err);
-      }
-    });
-  });
-}
+import { json, readBody, type Req, type Res } from "./http.js";
 
 /**
  * 피드백 API.

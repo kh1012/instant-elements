@@ -1,6 +1,6 @@
 import { flagBool, flagString } from "../args.js";
 import { defineCommand } from "../command.js";
-import { readGitInfo } from "../project.js";
+import { resolveActorName } from "../../identity/store.js";
 import { resolveConfig } from "../../config/resolve.js";
 import { installBundle, validateBundle } from "../../registry/install.js";
 import { CliError, color, emitJson, info, ok, warn } from "../ui.js";
@@ -64,7 +64,7 @@ export const addCommand = defineCommand({
 
     const result = installBundle(config, raw, {
       source: parsed.toString(),
-      actor: readGitInfo(config.root).userName ?? "unknown",
+      actor: resolveActorName(config.root),
       force: flagBool(args.flags, "force"),
     });
 

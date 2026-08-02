@@ -1,6 +1,6 @@
 import { flagBool, flagString } from "../args.js";
 import { defineCommand, type CommandContext } from "../command.js";
-import { readGitInfo } from "../project.js";
+import { resolveActorName } from "../../identity/store.js";
 import { resolveConfig } from "../../config/resolve.js";
 import type { ResolvedConfig } from "../../config/types.js";
 import { createFlow, listFlows, readFlow, writeFlow } from "../../flow/store.js";
@@ -18,7 +18,7 @@ async function loadConfig(ctx: CommandContext): Promise<ResolvedConfig> {
 }
 
 function storeOptions(config: ResolvedConfig) {
-  return { flowsDir: config.flowsDir, actor: readGitInfo(config.root).userName ?? "unknown" };
+  return { flowsDir: config.flowsDir, actor: resolveActorName(config.root) };
 }
 
 function requireSlug(ctx: CommandContext, usage: string): string {

@@ -123,6 +123,9 @@ export function ieVirtual({ config, galleryDir }: VirtualPluginOptions): Plugin 
       host: config.gallery.host,
       port: config.gallery.port,
       validate: config.validate,
+      // 헤더에서 마켓플레이스로 나가는 링크가 쓴다. 주소를 화면에 하드코딩하면 설정으로
+      // 다른 마켓플레이스를 가리켰을 때 링크만 옛 곳으로 간다.
+      publishUrl: config.publish.url,
     };
     return `export const galleryConfig = ${literal(view)};\nexport default galleryConfig;\n`;
   }

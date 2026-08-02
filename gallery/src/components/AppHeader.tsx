@@ -4,6 +4,7 @@ import entries from "virtual:ie/entries";
 import { cn } from "../lib/cn";
 import { Link } from "../router";
 import { useTheme } from "../theme";
+import { HeaderAvatarButton } from "./HeaderAvatarButton";
 import { Tooltip } from "./Tooltip";
 import { CommandIcon, FlowIcon, GridIcon, MoonIcon, PageIcon, SunIcon } from "./icons";
 
@@ -24,7 +25,13 @@ const PALETTE_KEYS = IS_MAC ? "⌘ K" : "Ctrl K";
  *
  * _근거: 상류 하네스 AppShell.tsx._
  */
-export function AppHeader({ active }: { active: Section }) {
+export function AppHeader({
+  active,
+  onOpenIdentity,
+}: {
+  active: Section;
+  onOpenIdentity: () => void;
+}) {
   const { theme, toggle } = useTheme();
   const [scrolled, setScrolled] = useState(false);
 
@@ -103,6 +110,8 @@ export function AppHeader({ active }: { active: Section }) {
           {galleryConfig.title}
           <span className="ml-2 opacity-60">{entries.length}</span>
         </span>
+
+        <HeaderAvatarButton onEdit={onOpenIdentity} />
       </div>
     </header>
   );

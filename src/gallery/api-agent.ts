@@ -1,60 +1,7 @@
-import type { Connect } from "vite";
 import { AgentRunStore } from "../agent/run-store.js";
 import type { AgentEvent } from "../agent/types.js";
 import type { ResolvedConfig } from "../config/types.js";
-
-type Req = Parameters<Connect.NextHandleFunction>[0];
-type Res = Parameters<Connect.NextHandleFunction>[1];
-
-function json(res: Res, body: unknown, status = 200): void {
-  res.statusCode = status;
-  res.setHeader("content-type", "application/json; charset=utf-8");
-  res.end(JSON.stringify(body));
-}
-
-function readBody(req: Req, limit = 512_000): Promise<unknown> {
-  return new Promise((resolve, reject) => {
-    let body = "";
-    req.on("data", (chunk: Buffer | string) => {
-      body += chunk;
-      if (body.length > limit) {
-        reject(new Error("payload too large"));
-        req.destroy();
-      }
-    });
-    req.on("error", reject);
-    req.on("end", () => {
-      try {
-        resolve(JSON.parse(body || "{}"));
-      } catch (err) {
-        reject(err);
-      }
-    });
-  });
-}
-
-/**
- * 다른 사이트가 이 API 를 부르지 못하게 막는다.
- *
- * 이 서버는 localhost 에 열려 있고 **파일을 고칠 수 있는 프로세스를 띄운다.** 브라우저는
- * 다른 탭의 악성 페이지가 보낸 요청도 그대로 전달하므로(CSRF), 요청이 우리 갤러리에서
- * 온 것인지 확인해야 한다.
- *
- * - `sec-fetch-site: same-origin` — 최신 브라우저가 붙여 주는 표시. 위조할 수 없다.
- * - `origin` 허용목록 — 헤더가 없는 클라이언트(curl 등)를 위한 이중 확인. 상류처럼 포트를
- *   하드코딩하지 않고 설정에서 계산한다(소비자마다 포트가 다르다).
- */
-function isSameOrigin(req: Req, config: ResolvedConfig): boolean {
-  const site = req.headers["sec-fetch-site"];
-  if (typeof site === "string" && site !== "same-origin") return false;
-
-  const origin = req.headers["origin"];
-  if (typeof origin !== "string") return true; // 브라우저가 아닌 클라이언트 — sec-fetch-site 로 이미 걸렀다.
-
-  const { host, port } = config.gallery;
-  const allowed = new Set([`http://${host}:${port}`, `http://localhost:${port}`, `http://127.0.0.1:${port}`]);
-  return allowed.has(origin);
-}
+import { isSameOrigin, json, readBody, type Req, type Res } from "./http.js";
 
 /**
  * 에이전트 실행 API — **`gallery.agent` 가 켜졌을 때만 등록된다**(src/gallery/api.ts).
@@ -114,7 +61,7 @@ export function createAgentApi(config: ResolvedConfig): {
       }
 
       // 여기부터는 상태를 바꾸는 요청 — 반드시 우리 갤러리에서 온 것이어야 한다.
-      if (method === "POST" && !isSameOrigin(req, config)) {
+      if (method === "POST" && !isSameOrigin(req)) {
         json(res, { error: "cross-origin 요청은 거부합니다." }, 403);
         return true;
       }

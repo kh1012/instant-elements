@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { flagBool, flagString } from "../args.js";
 import { defineCommand, type CommandContext } from "../command.js";
-import { readGitInfo } from "../project.js";
+import { resolveActorName } from "../../identity/store.js";
 import { resolveConfig } from "../../config/resolve.js";
 import type { ResolvedConfig } from "../../config/types.js";
 import { buildIndex } from "../../registry/index-file.js";
@@ -30,7 +30,7 @@ async function loadConfig(ctx: CommandContext): Promise<ResolvedConfig> {
 function storeOptions(config: ResolvedConfig) {
   return {
     pagesDir: config.pagesDir,
-    actor: readGitInfo(config.root).userName ?? "unknown",
+    actor: resolveActorName(config.root),
   };
 }
 

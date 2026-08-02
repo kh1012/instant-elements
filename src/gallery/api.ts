@@ -8,18 +8,12 @@ import { isValidSlug } from "../page/slug.js";
 import { readFeedback } from "../page/feedback.js";
 import { previewContentOf } from "../page/preview.js";
 import { listFlows, tryReadFlow } from "../flow/store.js";
-import { readGitInfo } from "../cli/project.js";
+import { resolveActorName } from "../identity/store.js";
 import { handlePageFeedback } from "./api-pages.js";
 import { createAgentApi } from "./api-agent.js";
+import { createIdentityApi } from "./api-identity.js";
+import { json } from "./http.js";
 import { packageVersion } from "../pkg.js";
-
-type Res = Parameters<Connect.NextHandleFunction>[1];
-
-function json(res: Res, body: unknown, status = 200): void {
-  res.statusCode = status;
-  res.setHeader("content-type", "application/json; charset=utf-8");
-  res.end(JSON.stringify(body));
-}
 
 /**
  * 갤러리 서버 API — 별도 프로세스가 아니라 Vite dev 서버의 미들웨어다.
@@ -32,8 +26,12 @@ function json(res: Res, body: unknown, status = 200): void {
  */
 export function ieApi(config: ResolvedConfig): Plugin {
   const dirs = { elementsDir: config.elementsDir, entriesDir: config.entriesDir };
-  // 피드백에 "누가 남겼나"를 남긴다 — 한 포트를 개발자와 검토자가 함께 쓰므로 필요하다.
-  const actor = readGitInfo(config.root).userName ?? "unknown";
+
+  /*
+   * 신원 API 는 항상 있다. 에이전트와 달리 위험한 일을 하지 않고, 없으면 첫 진입에서
+   * 이름을 정할 길 자체가 사라진다.
+   */
+  const identityApi = createIdentityApi(config);
 
   /**
    * 에이전트 API 는 **켰을 때만 존재한다.** 꺼져 있으면 객체 자체를 만들지 않으므로
@@ -50,8 +48,15 @@ export function ieApi(config: ResolvedConfig): Plugin {
       }
       server.middlewares.use((req, res, next) => {
         const url = req.url ?? "";
-        if (!url.startsWith("/api/")) return next();
         const path = url.split("?")[0] ?? "";
+
+        /*
+         * 신원만 `/api/` 밖의 경로도 받는다 — 로그인 콜백은 브라우저가 주소창으로 오는 전체
+         * 페이지 이동이라 `/auth/callback` 이어야 한다(`/api/…` 로 두면 SPA 링크처럼 보인다).
+         */
+        if (identityApi.handle(req, res, path)) return;
+
+        if (!url.startsWith("/api/")) return next();
 
         // 포트 점유자가 우리 갤러리인지 + 어느 프로젝트를 서빙 중인지 식별한다.
         // 여러 프로젝트를 오가며 작업할 때 "지금 뜬 갤러리가 내 프로젝트인가"를 확인하는 근거.
@@ -115,8 +120,14 @@ export function ieApi(config: ResolvedConfig): Plugin {
 
         if (agentApi?.handle(req, res, path)) return;
 
-        // 피드백은 별도 모듈로 — /api/pages/<slug> 보다 먼저 잡아야 슬러그로 오인하지 않는다.
-        if (handlePageFeedback(req, res, path, config, actor)) return;
+        /*
+         * 피드백은 별도 모듈로 — /api/pages/<slug> 보다 먼저 잡아야 슬러그로 오인하지 않는다.
+         *
+         * actor 를 부팅 시 한 번이 아니라 **요청마다** 구한다. 사람이 갤러리에서 이름을 바꾸면
+         * 그 다음 기록부터 바로 새 이름이어야 하는데, 부팅 값을 들고 있으면 서버를 다시 띄울
+         * 때까지 옛 이름으로 남는다.
+         */
+        if (handlePageFeedback(req, res, path, config, resolveActorName(config.root))) return;
 
         if (path.startsWith("/api/pages/") && req.method === "GET") {
           const rest = path.slice("/api/pages/".length);

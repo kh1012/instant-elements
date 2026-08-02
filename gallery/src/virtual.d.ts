@@ -45,6 +45,7 @@ declare module "virtual:ie/config" {
     host: string;
     port: number;
     validate: { colorLiterals: boolean; arbitraryValues: boolean; animation: boolean };
+    publishUrl: string;
   }
   export const galleryConfig: GalleryConfigView;
   export default galleryConfig;
