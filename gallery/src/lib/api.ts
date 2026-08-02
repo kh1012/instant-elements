@@ -167,3 +167,12 @@ export function restorePageVersion(
 ): Promise<{ slug: string; version: string; restoredFrom: string }> {
   return send(`/api/pages/${encodeURIComponent(slug)}/restore`, "POST", { version });
 }
+
+// ── 흐름 설정 (시작 화면·프레임)
+
+export function setFlowSettings(
+  slug: string,
+  input: { start?: string; frame?: string },
+): Promise<{ slug: string; start: string | null; frame: string | null }> {
+  return send(`/api/flows/${encodeURIComponent(slug)}/settings`, "POST", input);
+}

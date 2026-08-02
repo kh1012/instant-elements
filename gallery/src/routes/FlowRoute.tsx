@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { resolveFrame, type PageData } from "instant-elements/page";
 import { Button } from "../components/Button";
 import { FlowMap } from "../components/FlowMap";
+import { FlowSettings } from "./FlowRoute.settings";
 import { cn } from "../lib/cn";
 import { useAsync } from "../lib/useAsync";
 import { PageFrame } from "../page/PageFrame";
@@ -102,6 +103,20 @@ export function FlowRoute({ slug }: { slug: string }) {
             화면 {detail.screens.length}개 · 연결 {detail.flow.edges.length}개
             {screen ? ` · 지금 ${screen.title}` : ""}
           </p>
+
+          {/*
+            설정을 헤더 안에 둔다 — 시연 직전에 "시작을 이 화면으로"가 나오는 자리가 여기다.
+            별도 화면으로 빼면 그 왕복이 시연 흐름을 끊는다.
+          */}
+          <div className="mt-2">
+            <FlowSettings
+              slug={slug}
+              screens={detail.screens.map((s) => ({ slug: s.slug, title: s.title }))}
+              start={detail.flow.start}
+              frame={detail.flow.frame}
+              onChanged={state.reload}
+            />
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">

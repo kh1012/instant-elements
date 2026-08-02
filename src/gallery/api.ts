@@ -12,6 +12,7 @@ import { resolveActorName } from "../identity/store.js";
 import { handlePageFeedback } from "./api-pages.js";
 import { createAgentApi } from "./api-agent.js";
 import { createEntryApi } from "./api-entry.js";
+import { createFlowEditApi } from "./api-flow-edit.js";
 import { createPageEditApi } from "./api-page-edit.js";
 import { createIdentityApi } from "./api-identity.js";
 import { json } from "./http.js";
@@ -47,6 +48,7 @@ export function ieApi(config: ResolvedConfig): Plugin {
    */
   const entryApi = createEntryApi(config, (name) => agentApi?.isRunning(name) ?? false);
   const pageEditApi = createPageEditApi(config);
+  const flowEditApi = createFlowEditApi(config);
 
   return {
     name: "instant-elements:api",
@@ -146,6 +148,7 @@ export function ieApi(config: ResolvedConfig): Plugin {
 
         // 피드백과 같은 이유로 `/api/pages/<slug>` 범용 GET 보다 먼저 잡는다.
         if (pageEditApi.handle(req, res, path)) return;
+        if (flowEditApi.handle(req, res, path, resolveActorName(config.root))) return;
 
         if (path.startsWith("/api/pages/") && req.method === "GET") {
           const rest = path.slice("/api/pages/".length);

@@ -1,0 +1,92 @@
+import type { ResolvedConfig } from "../config/types.js";
+import { FRAMES } from "../page/schema.js";
+import { readFlow, writeFlow } from "../flow/store.js";
+import { isValidSlug } from "../page/slug.js";
+import { isSameOrigin, json, readBody, type Req, type Res } from "./http.js";
+
+/**
+ * 흐름을 **고치는** API.
+ *
+ * `POST /api/flows/<slug>/settings` — 시작 화면·프레임.
+ *
+ * 지금까지 흐름은 CLI 로만 고칠 수 있었다. 시연 직전에 "시작을 이 화면으로 바꿔줘"가 나오면
+ * 터미널로 나가야 했는데, 그건 시연 준비 중에 가장 하기 싫은 일이다.
+ *
+ * 쓰기는 전부 `writeFlow` 를 통과한다 — 파일 락과 `updatedAt`/`updatedBy` 갱신이 거기 있다.
+ * 우회하면 CLI 와 화면이 동시에 만질 때 한쪽이 사라진다.
+ */
+export function createFlowEditApi(config: ResolvedConfig) {
+  const store = (actor: string) => ({ flowsDir: config.flowsDir, actor });
+
+  return {
+    handle(req: Req, res: Res, path: string, actor: string): boolean {
+      const settings = /^\/api\/flows\/([^/]+)\/settings$/.exec(path);
+      if (!settings) return false;
+      if (req.method !== "POST") return false;
+
+      if (!isSameOrigin(req)) {
+        json(res, { error: "cross-origin 요청은 거부합니다." }, 403);
+        return true;
+      }
+
+      const slug = decodeURIComponent(settings[1] ?? "");
+      if (!isValidSlug(slug)) {
+        json(res, { error: "invalid slug" }, 400);
+        return true;
+      }
+
+      void readBody(req)
+        .then((body) => {
+          const input = body as { start?: unknown; frame?: unknown };
+          const current = readFlow(config.flowsDir, slug);
+
+          /*
+           * 시작 화면은 **편입된 화면 중 하나**여야 한다. 아무 slug 나 받으면 시연이 빈 화면에서
+           * 시작하고, 그 사실은 재생을 눌러 봐야 안다.
+           */
+          if (input.start !== undefined) {
+            if (typeof input.start !== "string") {
+              return json(res, { error: "start 는 문자열이어야 합니다." }, 400);
+            }
+            if (!current.screens.some((screen) => screen.slug === input.start)) {
+              return json(
+                res,
+                { error: `편입되지 않은 화면입니다: ${input.start}` },
+                400,
+              );
+            }
+          }
+
+          // 프레임은 아는 값만. 빈 문자열은 "페이지가 정한 값을 따른다"는 뜻으로 해제한다.
+          if (input.frame !== undefined && input.frame !== "") {
+            if (typeof input.frame !== "string" || !(input.frame in FRAMES)) {
+              return json(
+                res,
+                { error: `알 수 없는 프레임입니다: ${String(input.frame)}` },
+                400,
+              );
+            }
+          }
+
+          const flow = writeFlow(store(actor), slug, (existing) => {
+            const next = { ...existing };
+            if (input.start !== undefined) next.start = input.start as string;
+            if (input.frame !== undefined) {
+              if (input.frame === "") delete next.frame;
+              else next.frame = input.frame as string;
+            }
+            return next;
+          });
+
+          return json(res, { slug, start: flow.start ?? null, frame: flow.frame ?? null });
+        })
+        .catch((err: unknown) => {
+          const message = err instanceof Error ? err.message : String(err);
+          const hint = (err as { hint?: string }).hint;
+          json(res, { error: hint ? `${message} — ${hint}` : message }, 400);
+        });
+
+      return true;
+    },
+  };
+}
