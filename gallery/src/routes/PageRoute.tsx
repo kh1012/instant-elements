@@ -17,6 +17,9 @@ import { FeedbackPanel } from "../page/FeedbackPanel";
 import { FrameToggle, PageFrame, ZoomControl } from "../page/PageFrame";
 import { renderNodes } from "../page/PageRender";
 import { PageSketch, type SketchMode } from "../page/PageSketch";
+import { PageHistory } from "./PageRoute.history";
+import { PageTitle } from "./PageRoute.title";
+import { PageVersions } from "./PageRoute.versions";
 import { Link } from "../router";
 
 type ViewMode = SketchMode | "live";
@@ -118,8 +121,8 @@ export function PageRoute({ slug }: { slug: string }) {
       </Link>
 
       <header className="mt-4 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-step-2 font-semibold">{page.title || page.slug}</h1>
+        <div className="min-w-0">
+          <PageTitle slug={slug} title={page.title || page.slug} onSaved={state.reload} />
           <p className="mt-1 text-step-n2 text-st-muted-foreground">
             v{page.version} · {page.updatedBy || "알 수 없음"}
             {page.updatedAt ? ` · ${relativeTime(page.updatedAt)}` : ""}
@@ -182,16 +185,45 @@ export function PageRoute({ slug }: { slug: string }) {
           )}
         </div>
 
-        <FeedbackPanel
-          page={page}
-          items={feedback}
-          target={target}
-          importAlias={galleryConfig.importAlias}
-          onSubmit={submit}
-          onDelete={remove}
-          onClearAll={clearAll}
-          onClearTarget={() => setTarget(null)}
-        />
+        {/*
+          우측 기둥 순서: 지금 남긴 리뷰 → 어떻게 여기까지 왔나(버전·이력).
+          리뷰가 이 화면의 주 목적이라 맨 위다.
+        */}
+        <div className="flex w-full flex-col gap-4 xl:w-96 xl:shrink-0">
+          <FeedbackPanel
+            page={page}
+            items={feedback}
+            target={target}
+            importAlias={galleryConfig.importAlias}
+            onSubmit={submit}
+            onDelete={remove}
+            onClearAll={clearAll}
+            onClearTarget={() => setTarget(null)}
+          />
+
+          <details className="rounded-xl border border-st-border bg-st-card px-4 py-3" open>
+            <summary className="cursor-pointer text-step-n1 font-medium">이력</summary>
+            <div className="mt-3">
+              <PageHistory events={page.history} />
+            </div>
+          </details>
+
+          {/*
+            버전은 접어 둔다 — 되돌리기는 드물게 쓰는데 목록이 길어질 수 있어, 펼쳐 두면
+            리뷰 패널이 화면 밖으로 밀린다.
+          */}
+          <details className="rounded-xl border border-st-border bg-st-card px-4 py-3">
+            <summary className="cursor-pointer text-step-n1 font-medium">버전</summary>
+            <div className="mt-3">
+              <PageVersions
+                slug={slug}
+                current={page.version}
+                currentNodes={page.data.content.length}
+                onRestored={state.reload}
+              />
+            </div>
+          </details>
+        </div>
       </div>
     </div>
   );

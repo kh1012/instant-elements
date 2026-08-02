@@ -12,6 +12,7 @@ import { resolveActorName } from "../identity/store.js";
 import { handlePageFeedback } from "./api-pages.js";
 import { createAgentApi } from "./api-agent.js";
 import { createEntryApi } from "./api-entry.js";
+import { createPageEditApi } from "./api-page-edit.js";
 import { createIdentityApi } from "./api-identity.js";
 import { json } from "./http.js";
 import { packageVersion } from "../pkg.js";
@@ -45,6 +46,7 @@ export function ieApi(config: ResolvedConfig): Plugin {
    * agentApi 가 없을 때 false 를 돌려주는 것이 정확한 답이다.
    */
   const entryApi = createEntryApi(config, (name) => agentApi?.isRunning(name) ?? false);
+  const pageEditApi = createPageEditApi(config);
 
   return {
     name: "instant-elements:api",
@@ -141,6 +143,9 @@ export function ieApi(config: ResolvedConfig): Plugin {
          * 때까지 옛 이름으로 남는다.
          */
         if (handlePageFeedback(req, res, path, config, resolveActorName(config.root))) return;
+
+        // 피드백과 같은 이유로 `/api/pages/<slug>` 범용 GET 보다 먼저 잡는다.
+        if (pageEditApi.handle(req, res, path)) return;
 
         if (path.startsWith("/api/pages/") && req.method === "GET") {
           const rest = path.slice("/api/pages/".length);

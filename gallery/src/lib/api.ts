@@ -136,3 +136,34 @@ export function restoreEntry(
 ): Promise<{ name: string; sha: string; files: string[]; commit: string }> {
   return send(`/api/entry/${encodeURIComponent(name)}/restore`, "POST", { sha });
 }
+
+// ── 페이지 고치기 (제목·버전 복원)
+
+export interface PageVersion {
+  version: string;
+  title: string;
+  updatedAt: string;
+  updatedBy: string;
+  /** 그 버전이 담고 있던 최상위 노드 수 — 무엇이 달라지는지 가늠할 단서. */
+  nodes: number;
+}
+
+export function fetchPageVersions(
+  slug: string,
+): Promise<{ current: string; versions: PageVersion[] }> {
+  return get(`/api/pages/${encodeURIComponent(slug)}/versions`);
+}
+
+export function setPageTitle(
+  slug: string,
+  title: string,
+): Promise<{ slug: string; version: string; previous: string }> {
+  return send(`/api/pages/${encodeURIComponent(slug)}/title`, "POST", { title });
+}
+
+export function restorePageVersion(
+  slug: string,
+  version: string,
+): Promise<{ slug: string; version: string; restoredFrom: string }> {
+  return send(`/api/pages/${encodeURIComponent(slug)}/restore`, "POST", { version });
+}
