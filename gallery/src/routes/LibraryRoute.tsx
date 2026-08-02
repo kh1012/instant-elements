@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import entries from "virtual:ie/entries";
 import historyByName from "virtual:ie/history";
 import galleryConfig from "virtual:ie/config";
@@ -7,6 +7,7 @@ import { ComponentCard } from "../components/ComponentCard";
 import { cn } from "../lib/cn";
 import { isNew, searchEntries, sortEntries, type SortKey } from "../lib/search";
 import { partitionByPin, usePins } from "../lib/pins";
+import { useHeaderSearch } from "../lib/header-search";
 import { useScrollRestore } from "../lib/scroll-restore";
 import { navigate, useQuery } from "../router";
 
@@ -56,10 +57,52 @@ function setParam(params: URLSearchParams, key: string, value: string | null): v
   navigate(query ? `/?${query}` : "/", { replace: true });
 }
 
+/**
+ * 헤더 검색창의 자동완성 후보.
+ *
+ * 목록 필터와 **같은 함수**로 찾는다 — 둘이 다르게 찾으면 "자동완성엔 떴는데 목록엔 없다"가
+ * 되고, 그 순간 둘 다 못 믿게 된다.
+ */
+function suggestEntries(query: string) {
+  return searchEntries(entries, query).map((entry) => ({
+    id: entry.name,
+    label: entry.name,
+    hint: entry.meta.category,
+  }));
+}
+
 export function LibraryRoute() {
   const params = useQuery();
   const pins = usePins();
-  const [query, setQuery] = useState(() => params.get("q") ?? "");
+
+  /*
+   * 검색은 헤더가 갖고 있다. 여기서는 "이 화면에서는 컴포넌트를 이렇게 찾는다"만 등록하고,
+   * 거르기에는 확정된 값(`committed`)을 쓴다 — 매 글자마다 목록 전체를 다시 거르면 입력이 밀린다.
+   */
+  const { committed: query } = useHeaderSearch(
+    {
+      scope: "component",
+      placeholder: "역할·이름·검색어로 찾기",
+      suggest: suggestEntries,
+      // 후보를 고르면 검색어로 좁히는 대신 곧바로 그 컴포넌트로 간다 — 이름을 아는 사람의 지름길.
+      onPick: (name) => navigate(`/c/${name}`),
+    },
+    params.get("q") ?? "",
+  );
+
+  /*
+   * 확정된 검색어를 URL 에 되돌려 적는다. 검색창이 헤더로 올라가면서 이 배선이 끊어질 뻔했는데,
+   * 끊기면 "찾아 놓은 목록"을 북마크하거나 남에게 보낼 수 없다.
+   *
+   * `committed` 만 쓴다 — 타이핑 단계까지 URL 에 적으면 히스토리가 한 글자마다 쌓인다.
+   */
+  const urlQuery = params.get("q") ?? "";
+  useEffect(() => {
+    if (urlQuery === query) return;
+    // 의존성은 **문자열**이어야 한다. `useQuery()` 는 렌더마다 새 URLSearchParams 를 만들므로
+    // 객체를 넣으면 이 효과가 매 렌더 돌고, 그때마다 navigate 가 또 렌더를 부른다.
+    setParam(new URLSearchParams(window.location.search), "q", query);
+  }, [query, urlQuery]);
 
   const category = params.get("category") ?? "all";
   const sort = (params.get("sort") === "recent" ? "recent" : "name") as SortKey;
@@ -93,24 +136,18 @@ export function LibraryRoute() {
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-10">
-      <section className="rounded-xl bg-st-muted px-6 py-10 text-center">
-        <h1 className="text-step-2 font-semibold">라이브러리</h1>
+      {/*
+        히어로에서 배경 박스와 검색창을 걷어냈다.
+        - 검색은 헤더로 올라갔다. 여기 두면 스크롤을 내린 뒤에는 검색하러 위로 올라와야 한다.
+        - `bg-st-muted` 박스는 목록 위에 두 번째 헤더처럼 앉아, 진짜 헤더와 카드 사이에서
+          시선이 한 번 더 걸렸다. 제목과 한 줄 설명이면 이 화면이 무엇인지 말하기에 충분하다.
+      */}
+      <section className="py-6 text-center">
+        <h1 className="text-step-2 font-semibold">컴포넌트 갤러리</h1>
         <p className="mx-auto mt-2 max-w-xl text-step-n1 text-st-muted-foreground">
           역할을 설명하면 만들어지고, 여기에 쌓입니다. 필요한 컴포넌트가 이미 있는지 먼저 찾아
           보세요.
         </p>
-        <div className="mx-auto mt-6 max-w-md">
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-              setParam(new URLSearchParams(params), "q", event.target.value);
-            }}
-            placeholder="역할·이름·검색어로 찾기"
-            className="h-10 w-full rounded-md border border-st-border bg-st-card px-3 text-step-n1 shadow-lg placeholder:text-st-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-st-ring"
-          />
-        </div>
       </section>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">

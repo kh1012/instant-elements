@@ -156,3 +156,34 @@ export function GoogleIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+/** 실행 로그 — 프롬프트 꺾쇠와 커서 줄. 터미널을 아는 사람이면 형태만으로 안다. */
+export function TerminalIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} {...props}>
+      <path d="m5 8 3.5 3.5L5 15" />
+      <path d="M12.5 15H18" />
+    </svg>
+  );
+}
+
+/** 도움말 — 물음표 원. */
+export function HelpIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.5 9.2a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.2-2.5 3.9" />
+      <path d="M12 17.2h.01" />
+    </svg>
+  );
+}
+
+/** 맨 위로 — 위 화살표. */
+export function ArrowUpIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M12 19V5" />
+      <path d="m5 12 7-7 7 7" />
+    </svg>
+  );
+}

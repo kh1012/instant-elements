@@ -1,19 +1,24 @@
 import { useEffect, useState, type ReactNode } from "react";
 import galleryConfig from "virtual:ie/config";
-import entries from "virtual:ie/entries";
 import { cn } from "../lib/cn";
 import { Link } from "../router";
+import { hasMod, SHORTCUTS } from "../lib/shortcuts";
 import { useTheme } from "../theme";
+import { AgentNav } from "./AgentNav";
+import { BackToTop } from "./BackToTop";
 import { HeaderAvatarButton } from "./HeaderAvatarButton";
 import { Tooltip } from "./Tooltip";
-import { CommandIcon, FlowIcon, GridIcon, MoonIcon, PageIcon, SunIcon } from "./icons";
+import {
+  CommandIcon,
+  FlowIcon,
+  GridIcon,
+  HelpIcon,
+  MoonIcon,
+  PageIcon,
+  SunIcon,
+} from "./icons";
 
 export type Section = "library" | "pages" | "flows";
-
-// 표기는 실제 눌러야 하는 키와 같아야 한다 — 단축키를 **글자로 알려 주는 게** 이 버튼의 목적이라
-// mac 에 Ctrl 이라고 적으면 없느니만 못하다(핸들러는 metaKey·ctrlKey 를 둘 다 받는다).
-const IS_MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/.test(navigator.userAgent);
-const PALETTE_KEYS = IS_MAC ? "⌘ K" : "Ctrl K";
 
 /**
  * 앱 셸의 네비게이션.
@@ -21,7 +26,9 @@ const PALETTE_KEYS = IS_MAC ? "⌘ K" : "Ctrl K";
  * **전폭 띠가 아니라 떠 있는 pill 이다.** 본문이 라우트마다 다른 폭을 쓰는데 헤더만 전폭으로
  * 깔리면 그 띠가 화면의 기준선처럼 읽혀 본문 폭이 매번 어긋나 보인다.
  *
- * 아이콘만 쓰고 이름은 툴팁으로 낸다 — 라벨 셋을 늘어놓으면 pill 이 화면 절반을 먹는다.
+ * pill 은 **둘**이다. 왼쪽은 "어디로 갈까"(화면 전환), 오른쪽은 "무엇을 할까"(검색·도구).
+ * 하나에 몰아넣었더니 검색창이 들어오면서 pill 이 화면을 가로지르고, 네비 아이콘과 유틸
+ * 아이콘이 한 줄에 섞여 무엇이 이동이고 무엇이 동작인지 구분되지 않았다.
  *
  * _근거: 상류 하네스 AppShell.tsx._
  */
@@ -42,78 +49,135 @@ export function AppHeader({
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (!hasMod(event) || !event.shiftKey || event.key.toLowerCase() !== "l") return;
+      event.preventDefault();
+      toggle();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [toggle]);
+
   const openPalette = () => {
     // 팔레트는 자기 키 핸들러를 갖고 있다 — 상태를 위로 끌어올리는 대신 같은 이벤트를 쏜다.
     window.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "k", metaKey: IS_MAC, ctrlKey: !IS_MAC }),
+      new KeyboardEvent("keydown", { key: "k", metaKey: true, ctrlKey: true }),
     );
   };
 
+  const pill =
+    "header-elevate flex items-center gap-2 rounded-full border border-st-border bg-st-background/80 px-3 py-2 shadow-lg backdrop-blur-md";
+
   return (
-    <header className="sticky top-0 z-20 flex justify-center px-6 pb-3 pt-6">
-      <div
-        data-scrolled={scrolled}
-        className="header-elevate flex w-fit items-center gap-2 rounded-full border border-st-border bg-st-background/80 px-4 py-3 shadow-lg backdrop-blur-md"
-      >
-        <nav className="flex shrink-0 gap-1">
-          <NavIcon to="/" active={active === "library"} label="컴포넌트">
-            <GridIcon />
-          </NavIcon>
-          <NavIcon to="/pages" active={active === "pages"} label="페이지">
-            <PageIcon />
-          </NavIcon>
-          <NavIcon to="/flows" active={active === "flows"} label="흐름">
-            <FlowIcon />
-          </NavIcon>
-        </nav>
+    <>
+      <header className="sticky top-0 z-20 flex justify-center gap-3 px-6 pb-3 pt-6">
+        <div data-scrolled={scrolled} className={cn(pill, "shrink-0")}>
+          {/*
+            어느 프로젝트를 서빙 중인지. 여러 프로젝트를 오가며 포트를 여럿 띄우면 화면만 보고는
+            구분이 안 된다 — 개수는 뺐다(툴바가 이미 센다).
+          */}
+          <span className="max-w-40 truncate pl-1.5 pr-0.5 text-step-n2 text-st-muted-foreground">
+            {galleryConfig.title}
+          </span>
+          <span aria-hidden className="h-5 w-px shrink-0 bg-st-border/50" />
+          <nav aria-label="화면 전환" className="flex shrink-0 gap-1">
+            <NavIcon to="/" active={active === "library"} label="컴포넌트">
+              <GridIcon />
+            </NavIcon>
+            <NavIcon to="/pages" active={active === "pages"} label="페이지">
+              <PageIcon />
+            </NavIcon>
+            <NavIcon to="/flows" active={active === "flows"} label="흐름">
+              <FlowIcon />
+            </NavIcon>
+          </nav>
+        </div>
 
-        {/* 유틸 아이콘도 ghost 로 통일 — 테두리 없이 hover 틴트만. 네비와 한 결. */}
-        <Tooltip content={theme === "dark" ? "라이트 모드로" : "다크 모드로"}>
-          <button
-            type="button"
-            onClick={toggle}
-            aria-label={theme === "dark" ? "라이트 모드로 전환" : "다크 모드로 전환"}
-            className="press grid size-8 place-items-center rounded-lg text-st-muted-foreground hover:bg-st-muted/60 hover:text-st-foreground"
-          >
-            {theme === "dark" ? <SunIcon /> : <MoonIcon />}
-          </button>
-        </Tooltip>
+        <div data-scrolled={scrolled} className={pill}>
+          {/*
+            검색창이 들어오는 자리. 입력창 자체는 앱에서 한 번만 그려지고 여기로 포털된다
+            (`components/SearchBox.tsx`) — 라우트마다 그리면 화면을 옮길 때 포커스가 날아간다.
+            검색을 등록한 라우트가 없으면 이 칸은 그냥 비어 있다.
+          */}
+          <div id="header-search-slot" className="empty:hidden" />
 
-        <span aria-hidden className="mx-1 h-5 w-px shrink-0 bg-st-border/50" />
-
-        {/*
-          전역 팔레트는 ⌘K 를 아는 사람만 쓰던 기능이다 — 손잡이를 세워 **눌러서도** 열리게 하고
-          툴팁이 단축키를 글자로 알려 준다. 아이콘이 ⌘ 자체라 툴팁 전에도 힌트가 된다.
-        */}
-        <Tooltip
-          content={
-            <span className="flex items-center gap-1.5">
-              전체 검색
-              <kbd className="rounded border border-st-border px-1 py-0.5 leading-none">
-                {PALETTE_KEYS}
-              </kbd>
-            </span>
-          }
-        >
-          <button
-            type="button"
+          <IconButton
             onClick={openPalette}
-            aria-label={`전체 검색 (${PALETTE_KEYS})`}
-            aria-keyshortcuts={IS_MAC ? "Meta+K" : "Control+K"}
-            className="press grid size-8 shrink-0 place-items-center rounded-lg text-st-muted-foreground hover:bg-st-muted/60 hover:text-st-foreground"
+            label="전체 검색"
+            shortcut={SHORTCUTS.palette}
           >
             <CommandIcon />
-          </button>
-        </Tooltip>
+          </IconButton>
 
-        <span className="shrink-0 pl-1 pr-1 text-step-n2 text-st-muted-foreground">
-          {galleryConfig.title}
-          <span className="ml-2 opacity-60">{entries.length}</span>
-        </span>
+          <span aria-hidden data-header-divider className="mx-0.5 h-5 w-px shrink-0 bg-st-border/50" />
 
-        <HeaderAvatarButton onEdit={onOpenIdentity} />
-      </div>
-    </header>
+          <AgentNav />
+
+          <IconButton
+            onClick={toggle}
+            label={theme === "dark" ? "라이트 모드로" : "다크 모드로"}
+            shortcut={SHORTCUTS.theme}
+          >
+            {theme === "dark" ? <SunIcon /> : <MoonIcon />}
+          </IconButton>
+
+          <IconButton
+            // 목록 자체는 `?` 를 듣는 ShortcutsDialog 가 갖고 있다 — 같은 키를 쏴서 연다.
+            onClick={() =>
+              window.dispatchEvent(new KeyboardEvent("keydown", { key: "?", bubbles: true }))
+            }
+            label="단축키"
+            shortcut={SHORTCUTS.help}
+          >
+            <HelpIcon />
+          </IconButton>
+
+          <HeaderAvatarButton onEdit={onOpenIdentity} />
+        </div>
+      </header>
+
+      <BackToTop visible={scrolled} />
+    </>
+  );
+}
+
+function IconButton({
+  onClick,
+  label,
+  shortcut,
+  children,
+}: {
+  onClick: () => void;
+  label: string;
+  shortcut?: { keys: string; aria: string };
+  children: ReactNode;
+}) {
+  return (
+    <Tooltip
+      content={
+        shortcut ? (
+          <span className="flex items-center gap-1.5">
+            {label}
+            <kbd className="rounded border border-st-border px-1 py-0.5 leading-none">
+              {shortcut.keys}
+            </kbd>
+          </span>
+        ) : (
+          label
+        )
+      }
+    >
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={shortcut ? `${label} (${shortcut.keys})` : label}
+        {...(shortcut ? { "aria-keyshortcuts": shortcut.aria } : {})}
+        className="press grid size-8 shrink-0 place-items-center rounded-lg text-st-muted-foreground hover:bg-st-muted/60 hover:text-st-foreground"
+      >
+        {children}
+      </button>
+    </Tooltip>
   );
 }
 

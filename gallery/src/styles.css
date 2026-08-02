@@ -176,6 +176,29 @@ body {
 }
 
 /*
+ * "지금 돌고 있다"는 점.
+ *
+ * 회전하는 스피너를 쓰지 않는다 — 헤더의 6px 짜리 점에서는 회전이 보이지 않고, 화면 구석에서
+ * 계속 도는 것은 시선을 잡아먹기만 한다. 밝기만 오가면 곁눈으로도 "살아 있다"가 읽힌다.
+ */
+@keyframes ie-status-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.anim-status-pulse {
+  animation: ie-status-pulse 1.6s ease-in-out infinite;
+}
+
+/* 움직임을 줄이라고 한 사람에게는 켜진 채로 둔다 — 깜빡임이 아니라 상태가 정보다. */
+@media (prefers-reduced-motion: reduce) {
+  .anim-status-pulse {
+    animation: none;
+  }
+}
+
+/*
  * 목록 등장 stagger — 카드가 한꺼번에 나타나면 어디를 봐야 할지 모른다. 순서대로 40ms 씩
  * 밀어 시선이 왼쪽 위부터 흐르게 한다. 12번째부터는 더 밀지 않는다(그 아래는 어차피 화면 밖이다).
  */
@@ -332,4 +355,15 @@ body {
 
 ::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+/*
+ * `type="search"` 의 브라우저 기본 지우기 버튼을 없앤다.
+ *
+ * 우리 지우기 버튼과 겹쳐 ✕ 가 둘로 보였다. type 을 text 로 바꾸면 되지만, search 여야
+ * 보조기술이 "검색 입력"으로 읽고 모바일 키보드도 검색 배열로 뜬다 — 의미는 두고 장식만 끈다.
+ */
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration {
+  appearance: none;
 }

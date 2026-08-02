@@ -5,7 +5,10 @@ import { IdentityModal } from "./components/IdentityModal";
 import { IdentityProvider } from "./components/IdentityProvider";
 import { LinkNotice } from "./components/LinkNotice";
 import { RunPanel } from "./components/RunPanel";
+import { SearchBox } from "./components/SearchBox";
+import { ShortcutsDialog } from "./components/ShortcutsDialog";
 import { AgentProvider } from "./lib/agent-store";
+import { HeaderSearchProvider } from "./lib/header-search";
 import { useIdentity } from "./lib/identity";
 import { DetailRoute } from "./routes/DetailRoute";
 import { FlowRoute } from "./routes/FlowRoute";
@@ -21,7 +24,10 @@ export function App() {
     // 신원도 마찬가지로 라우트 위다: 헤더 아바타와 히스토리 작성자가 같은 값을 봐야 한다.
     <AgentProvider>
       <IdentityProvider>
-        <Shell />
+        {/* 검색어도 라우트 위다 — 헤더의 입력창이 화면을 옮길 때마다 다시 마운트되면 안 된다. */}
+        <HeaderSearchProvider>
+          <Shell />
+        </HeaderSearchProvider>
       </IdentityProvider>
     </AgentProvider>
   );
@@ -58,8 +64,14 @@ function Shell() {
     <>
       <div className="min-h-full bg-st-background text-st-foreground">
         <AppHeader active={section} onOpenIdentity={() => setIdentityOpen(true)} />
+        {/*
+          검색창은 헤더 안에 그려지지만 **마운트는 여기서** 한다. 헤더 트리 안에 두면 라우트가
+          바뀔 때 함께 다시 그려져 포커스와 입력이 날아간다.
+        */}
+        <SearchBox />
         <LinkNotice />
         <CommandPalette />
+        <ShortcutsDialog />
         <RunPanel />
         <IdentityModal open={identityOpen} onClose={() => setIdentityOpen(false)} />
 

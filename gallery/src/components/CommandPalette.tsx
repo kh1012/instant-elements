@@ -38,9 +38,23 @@ export function CommandPalette() {
         setOpen((v) => !v);
         return;
       }
-      // `/` 는 입력 중이 아닐 때만 — 글을 쓰다가 슬래시를 치면 팔레트가 뜨면 안 된다.
+      /*
+       * `/` 는 "검색으로 간다"는 뜻이고, **가장 가까운 검색이 이긴다.**
+       *
+       * 헤더에 그 화면의 검색창이 있으면 그쪽으로 보낸다. 둘 다 `/` 를 듣게 두었더니 한쪽이
+       * 조용히 이겨서, 컴포넌트를 거르려고 친 슬래시가 엉뚱하게 팔레트를 열었다. 키 하나에
+       * 핸들러 둘을 두지 않고 여기서 순서를 정한다 — 팔레트는 검색창이 없는 화면의 대안이다.
+       *
+       * 입력 중일 때는 아무것도 안 한다. 그때 슬래시는 그냥 글자다.
+       */
       if (event.key === "/" && !typing && !open) {
         event.preventDefault();
+        const inline = document.querySelector<HTMLInputElement>("#header-search-slot input");
+        if (inline) {
+          inline.focus();
+          inline.select();
+          return;
+        }
         setOpen(true);
         return;
       }
