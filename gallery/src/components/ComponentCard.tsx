@@ -4,11 +4,12 @@ import type { Entry } from "instant-elements/registry";
 import { cn } from "../lib/cn";
 import { togglePin } from "../lib/pins";
 import { buildIntegrationPrompt } from "../lib/prompt";
-import { isNew } from "../lib/search";
+import { hoursUntilStale, isNew } from "../lib/search";
 import { Link } from "../router";
+import { Avatar } from "./Avatar";
 import { CopyButton } from "./CopyButton";
 import { Highlight } from "./Highlight";
-import { StatusBadge } from "./StatusBadge";
+import { CategoryBadge, StatusBadge } from "./StatusBadge";
 import { PinIcon } from "./icons";
 import { SafePreview } from "./SafePreview";
 import { Tooltip } from "./Tooltip";
@@ -39,6 +40,9 @@ function ComponentCardImpl({
   index = 0,
   pinned = false,
   query = "",
+  running = false,
+  mode = "live",
+  compact = false,
 }: {
   entry: Entry;
   /** stagger 순서. 목록에서의 위치. */
@@ -46,9 +50,15 @@ function ComponentCardImpl({
   pinned?: boolean;
   /** 지금 걸린 검색어 — 이름·설명에서 걸린 부분을 표시하는 데 쓴다. */
   query?: string;
+  /** 이 컴포넌트를 지금 에이전트가 고치고 있는가. */
+  running?: boolean;
+  /** `summary` 면 프리뷰를 그리지 않는다 — 목록이 길어졌을 때의 탈출구. */
+  mode?: "live" | "summary";
+  compact?: boolean;
 }) {
   const { ref, inView } = useInView<HTMLDivElement>();
   const fresh = isNew(entry);
+  const hoursLeft = fresh ? hoursUntilStale(entry) : null;
   const prompt = buildIntegrationPrompt(entry, {
     importAlias: galleryConfig.importAlias,
     baseUrl: `http://${galleryConfig.host}:${galleryConfig.port}`,
@@ -59,8 +69,17 @@ function ComponentCardImpl({
       ref={ref}
       className={cn(
         "stagger-item hover-lift group relative isolate flex flex-col gap-3 overflow-hidden",
-        "rounded-xl border border-st-border bg-st-card p-4 shadow-sm",
+        "rounded-xl border bg-st-card shadow-sm",
+        compact ? "gap-2 p-3" : "p-4",
+        // 상태를 테두리로도 말한다 — 뱃지는 카드 안쪽 한 줄이라 훑을 때 놓치기 쉽다.
+        entry.meta.status === "deprecated"
+          ? "border-st-destructive/30"
+          : entry.meta.status === "stable"
+            ? "border-st-success/25"
+            : "border-st-border",
         "hover:border-st-foreground/20 hover:shadow-xl active:shadow-md",
+        // 돌고 있는 카드는 링으로 감싼다. 목록을 훑다가도 "저건 지금 바뀌는 중"이 보여야 한다.
+        running ? "ring-2 ring-st-success" : "",
       )}
       style={{ "--stagger-index": index } as CSSProperties}
     >
@@ -98,28 +117,39 @@ function ComponentCardImpl({
       </span>
 
       {fresh ? (
-        <span className="new-badge absolute right-3 top-3 z-20 grid size-5 place-items-center text-step-n2 font-bold leading-none">
-          {/* leading-none 라인박스에서 대문자 N 이 하강부 여백 탓에 위로 쏠려 보여, 광학 중앙 보정. */}
-          <span aria-hidden data-glyph className="translate-y-[0.11em]">
-            N
+        // 언제 사라지는지 알려 준다 — "N 이 왜 없어졌지"를 나중에 묻지 않게.
+        <Tooltip content={`신규 — ${hoursLeft}시간 뒤 해제`}>
+          <span className="new-badge absolute right-3 top-3 z-20 grid size-5 place-items-center text-step-n2 font-bold leading-none">
+            {/* leading-none 라인박스에서 대문자 N 이 하강부 여백 탓에 위로 쏠려 보여, 광학 중앙 보정. */}
+            <span aria-hidden data-glyph className="translate-y-[0.11em]">
+              N
+            </span>
+            <span className="sr-only">신규 — 최근 24시간 내 생성</span>
           </span>
-          <span className="sr-only">신규 — 최근 24시간 내 생성</span>
-        </span>
+        </Tooltip>
       ) : null}
 
       {/*
         content-visibility:auto — 화면 밖 썸네일의 렌더·애니메이션을 브라우저가 건너뛴다.
         고정 높이라 레이아웃 시프트 없이 오프스크린 부하만 덜어낸다.
       */}
-      <div className="pointer-events-none flex h-40 items-start justify-center overflow-hidden rounded-lg bg-st-background p-4 [content-visibility:auto]">
-        {inView ? (
-          <div className="anim-fade-in flex size-full items-start justify-center">
-            <SafePreview name={entry.name} />
-          </div>
-        ) : (
-          <PreviewSkeleton />
-        )}
-      </div>
+      {mode === "live" ? (
+        <div
+          className={cn(
+            "pointer-events-none flex items-start justify-center overflow-hidden rounded-lg bg-st-background p-4",
+            "[content-visibility:auto]",
+            compact ? "h-28" : "h-40",
+          )}
+        >
+          {inView ? (
+            <div className="anim-fade-in flex size-full items-start justify-center">
+              <SafePreview name={entry.name} />
+            </div>
+          ) : (
+            <PreviewSkeleton />
+          )}
+        </div>
+      ) : null}
 
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between gap-2">
@@ -137,8 +167,13 @@ function ComponentCardImpl({
 
       {/* mt-auto — 설명 길이가 달라도 카드 밑단이 한 줄에 정렬된다. */}
       <div className="mt-auto flex items-center justify-between gap-2 pt-1">
-        <span className="truncate text-step-n2 text-st-muted-foreground">
-          {entry.meta.category} · @{entry.meta.createdBy}
+        <span className="flex min-w-0 items-center gap-1.5">
+          <CategoryBadge category={entry.meta.category} />
+          <Tooltip content={`만든이 ${entry.meta.createdBy}`}>
+            <span className="relative z-10">
+              <Avatar name={entry.meta.createdBy} size="xs" />
+            </span>
+          </Tooltip>
         </span>
         <div className="relative z-10 opacity-70 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
           <CopyButton text={prompt} label="프롬프트 복사" size="sm" />

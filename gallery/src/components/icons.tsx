@@ -197,3 +197,58 @@ export function PlusIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+/** 선택기 펼침 표시. */
+export function ChevronDownIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} {...props}>
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
+/** 그리드 뷰 — 카드 격자. (GridIcon 은 네비에서 쓰이므로 별도.) */
+export function ViewGridIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+      <rect x="14" y="3" width="7" height="7" rx="1.5" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+      <rect x="14" y="14" width="7" height="7" rx="1.5" />
+    </svg>
+  );
+}
+
+/** 목록 뷰 — 줄 세 개. */
+export function ViewListIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M8 6h13" />
+      <path d="M8 12h13" />
+      <path d="M8 18h13" />
+      <path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01" />
+    </svg>
+  );
+}
+
+/** 밀도 — 행 간격을 좁힌다. */
+export function DensityIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M4 7h16" />
+      <path d="M4 11h16" />
+      <path d="M4 15h16" />
+      <path d="M4 19h16" />
+    </svg>
+  );
+}
+
+/** 초기화 — 되돌리는 화살표. */
+export function ResetIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M3 12a9 9 0 1 0 3-6.7" />
+      <path d="M3 4v5h5" />
+    </svg>
+  );
+}

@@ -23,11 +23,27 @@ export function searchEntries(entries: Entry[], query: string): Entry[] {
   });
 }
 
+/** 신규 표시가 붙어 있는 기간. */
+const NEW_WINDOW_MS = 24 * 60 * 60 * 1000;
+
 /** 24시간 안에 만들어졌으면 새 것으로 표시한다. */
 export function isNew(entry: Entry, now = Date.now()): boolean {
   const created = Date.parse(entry.meta.createdAt);
   if (Number.isNaN(created)) return false;
-  return now - created < 24 * 60 * 60 * 1000;
+  return now - created < NEW_WINDOW_MS;
+}
+
+/**
+ * 신규 표시가 몇 시간 뒤 사라지나.
+ *
+ * 뱃지만 있고 기한이 없으면 "어제 봤을 때 N 이었는데 왜 없어졌지"를 나중에 묻게 된다.
+ * 남은 시간을 툴팁으로 말해 두면 그 질문이 생기지 않는다. 0 시간은 없다 — 곧 사라져도
+ * "1시간 뒤"라고 말하는 편이 "0시간 뒤"보다 사람 말에 가깝다.
+ */
+export function hoursUntilStale(entry: Entry, now = Date.now()): number {
+  const created = Date.parse(entry.meta.createdAt);
+  if (Number.isNaN(created)) return 0;
+  return Math.max(1, Math.ceil((created + NEW_WINDOW_MS - now) / (60 * 60 * 1000)));
 }
 
 /**
