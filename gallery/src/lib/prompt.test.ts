@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Entry } from "instant-elements/registry";
 import {
+  buildCreatePrompt,
   buildIntegrationPrompt,
   buildModifyPrompt,
   buildSplitPrompt,
@@ -176,6 +177,45 @@ describe("분할 프롬프트", () => {
     );
     expect(buildSplitPrompt(entry({ category: "System" }), ctx)).toContain(
       "Composite 로 맞춘다",
+    );
+  });
+});
+
+describe("buildCreatePrompt", () => {
+  it("요청을 그대로 싣는다", () => {
+    expect(buildCreatePrompt("사용자 아바타와 이름을 한 줄로", ctx)).toContain(
+      "사용자 아바타와 이름을 한 줄로",
+    );
+  });
+
+  it("앞뒤 공백은 털어 낸다 — 붙여넣기로 들어온 빈 줄이 요청처럼 보이면 안 된다", () => {
+    const prompt = buildCreatePrompt("  \n 작은 칩 \n  ", ctx);
+    expect(prompt).toContain("## 요청사항\n작은 칩\n");
+  });
+
+  it("만들기 전에 먼저 찾으라고 시킨다", () => {
+    // 비슷한 게 둘이면 둘 다 안 쓰이게 된다 — 중복 생성이 이 화면의 가장 큰 위험이다.
+    const prompt = buildCreatePrompt("칩", ctx);
+    expect(prompt).toContain("ie element list");
+    expect(prompt).toContain("먼저 찾는다");
+  });
+
+  it("손으로 파일을 만들지 말고 스캐폴드를 거치게 한다", () => {
+    // 엔트리·히스토리·index 가 빠지면 갤러리에 나타나지 않는다.
+    const prompt = buildCreatePrompt("칩", ctx);
+    expect(prompt).toContain("ie element new <name>");
+    expect(prompt).toContain("손으로 파일을 만들지 말 것");
+  });
+
+  it("import 별칭과 확인 주소는 설정에서 온다", () => {
+    const prompt = buildCreatePrompt("칩", ctx);
+    expect(prompt).toContain("@/elements/<name>");
+    expect(prompt).toContain("http://127.0.0.1:9221/c/<name>");
+  });
+
+  it("토큰만 쓰라는 규칙을 수정 프롬프트와 같은 문장으로 싣는다", () => {
+    expect(buildCreatePrompt("칩", ctx)).toContain(
+      "색은 `st-*` 토큰만, 크기·여백·라운드는 스케일만 — 임의 hex·px 금지.",
     );
   });
 });

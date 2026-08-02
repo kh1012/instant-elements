@@ -232,3 +232,48 @@ export function buildSplitPrompt(entry: Entry, ctx: PromptContext): string {
 
   return lines.filter((line): line is string => line !== null).join("\n");
 }
+
+/**
+ * "생성 프롬프트" — 설명 한 줄로 **새 컴포넌트를 만들라**는 지시문.
+ *
+ * 수정·분할과 갈리는 지점은 **출발점이 없다**는 것이다. 저 둘은 고칠 대상이 이미 있어 경로·props·
+ * 규칙을 프롬프트에 박아 줄 수 있지만, 생성은 이름조차 아직 없다. 그래서 이 프롬프트가 하는 일은
+ * 대부분 **이름을 정하는 규칙과 스캐폴드 명령을 알려 주는 것**이다.
+ *
+ * `ie element new` 를 반드시 거치게 못 박는다. 파일만 손으로 만들면 엔트리·히스토리·index 가
+ * 빠져서 갤러리에 나타나지 않고, 나중에 "만들었는데 왜 안 보이지"로 돌아온다.
+ */
+export function buildCreatePrompt(request: string, ctx: PromptContext): string {
+  const lines = [
+    "# 새 컴포넌트 만들기",
+    "",
+    '아래 **"요청사항"에 맞는 컴포넌트를 새로 만든다.** 만들기 전에 비슷한 것이 이미 있는지 먼저 찾는다.',
+    "",
+    "## 요청사항",
+    request.trim(),
+    "",
+    "## 순서",
+    "1. **먼저 찾는다.** `ie element list` 로 비슷한 역할이 이미 있는지 본다. 있으면 새로 만들지 말고",
+    "   그 컴포넌트를 고치거나 props 를 넓히는 쪽을 제안한다 — 비슷한 게 둘이면 둘 다 안 쓰이게 된다.",
+    "2. **이름을 정한다.** 소문자 kebab-case, 역할이 드러나는 이름(`stat-card`, `page-header`).",
+    "   생김새가 아니라 쓰임으로 짓는다(`blue-box` 말고 `alert-banner`).",
+    "3. **스캐폴드한다.** 손으로 파일을 만들지 말 것 — 엔트리·히스토리·index 가 함께 생겨야 한다.",
+    "```bash",
+    "ie element new <name> \\",
+    '  --intent "<이 컴포넌트가 맡는 역할 한 줄>" \\',
+    '  --summary "<목록에 뜰 한 줄 설명>" \\',
+    "  --category Composite",
+    "```",
+    "4. 생성된 3파일(컴포넌트·데모·배럴)을 실제 구현으로 채우고, 엔트리의 `meta.props` 를 채운다.",
+    "",
+    "## 규칙",
+    "- 색은 `st-*` 토큰만, 크기·여백·라운드는 스케일만 — 임의 hex·px 금지.",
+    "- 데모(`*.demo.tsx`)는 **대표 상태 한 컷**이다. 갤러리 카드가 그 파일을 그린다.",
+    `- 앱에서는 \`${ctx.importAlias}/<name>\` 으로 import 된다.`,
+    "",
+    "## 확인",
+    `${ctx.baseUrl}/c/<name>`,
+  ];
+
+  return lines.join("\n");
+}

@@ -187,3 +187,13 @@ export function ArrowUpIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+/** 새로 만들기 — 더하기. */
+export function PlusIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </svg>
+  );
+}

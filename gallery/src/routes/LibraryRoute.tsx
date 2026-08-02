@@ -4,6 +4,7 @@ import historyByName from "virtual:ie/history";
 import galleryConfig from "virtual:ie/config";
 import type { ElementCategory, Entry } from "instant-elements/registry";
 import { ComponentCard } from "../components/ComponentCard";
+import { CreateComposer } from "../components/CreateComposer";
 import { cn } from "../lib/cn";
 import { isNew, searchEntries, sortEntries, type SortKey } from "../lib/search";
 import { partitionByPin, usePins } from "../lib/pins";
@@ -150,6 +151,9 @@ export function LibraryRoute() {
         </p>
       </section>
 
+      {/* 히어로 바로 아래가 생성 진입점 자리다 — "없네" 를 알게 되는 순간과 만드는 순간을 붙인다. */}
+      <CreateComposer />
+
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-1.5">
           {CATEGORY_FILTERS.map((value) => {
@@ -162,7 +166,7 @@ export function LibraryRoute() {
                 type="button"
                 onClick={() => setParam(new URLSearchParams(params), "category", value)}
                 className={cn(
-                  "press rounded-md px-2.5 py-1 text-step-n2",
+                  "press rounded-full px-3 py-1 text-step-n2",
                   active
                     ? "bg-st-primary text-st-primary-foreground"
                     : "bg-st-muted text-st-muted-foreground hover:bg-st-interactive-muted-hover-bg",
@@ -188,7 +192,7 @@ export function LibraryRoute() {
                 type="button"
                 onClick={() => setParam(new URLSearchParams(params), "activity", value)}
                 className={cn(
-                  "press rounded-md px-2.5 py-1 text-step-n2",
+                  "press rounded-full px-3 py-1 text-step-n2",
                   activity === value
                     ? "bg-st-muted text-st-foreground"
                     : "text-st-muted-foreground hover:bg-st-interactive-muted-hover-bg",
@@ -206,7 +210,7 @@ export function LibraryRoute() {
               type="button"
               onClick={() => setParam(new URLSearchParams(params), "sort", value)}
               className={cn(
-                "press rounded-md px-2.5 py-1 text-step-n2",
+                "press rounded-full px-3 py-1 text-step-n2",
                 sort === value
                   ? "bg-st-muted text-st-foreground"
                   : "text-st-muted-foreground hover:bg-st-interactive-muted-hover-bg",

@@ -59,7 +59,7 @@ export function CopyButton({
         onClick={() => void copy()}
         aria-label={label}
         className={cn(
-          "press inline-flex h-9 w-9 items-center justify-center rounded-md",
+          "press inline-flex h-9 w-9 items-center justify-center rounded-full",
           "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-st-ring",
           state === "copied"
             ? "bg-st-badge-success-bg text-st-success"

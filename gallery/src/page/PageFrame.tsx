@@ -11,9 +11,6 @@ import { cn } from "../lib/cn";
  *
  * **1:1 로 그리고 넘치면 스크롤한다.** 축소하지 않는 이유: 포털로 `document.body` 에 빠져나가는
  * 컴포넌트(모달·팝오버·툴팁)가 스케일 밖에 그려져 크기와 위치가 어긋나기 때문이다.
- *
- * `preview-surface` — 이 안은 **제품 화면**이다. 갤러리 크롬의 모노톤이 아니라 제품 실제 색이
- * 나와야 한다(styles.css 주석 참고).
  */
 export function PageFrame({
   frame,
@@ -36,7 +33,7 @@ export function PageFrame({
         className="mx-auto"
       >
         <div
-          className={cn("preview-surface shrink-0 bg-st-background shadow-sm", className)}
+          className={cn("shrink-0 bg-st-background shadow-sm", className)}
           style={{
             width: size.width,
             minHeight: size.height,

@@ -19,6 +19,9 @@ const SIZES: Record<Size, string> = {
 /**
  * 갤러리 크롬 전용 버튼.
  *
+ * 모서리는 **완전한 알약**이다. 헤더 pill·아바타·상태 뱃지가 이미 원형 계열이라, 버튼만
+ * 각지면 같은 화면에서 두 가지 언어가 섞인다.
+ *
  * 소비 프로젝트의 컴포넌트 라이브러리에 의존하지 않는다 — 갤러리가 소비자 컴포넌트를 쓰기
  * 시작하면 "갤러리가 깨져서 컴포넌트를 못 보는" 순환이 생긴다. 도구는 자기 힘으로 떠야 한다.
  */
@@ -37,7 +40,7 @@ export function Button({
     <button
       type="button"
       className={cn(
-        "press inline-flex items-center justify-center gap-1.5 rounded-md font-medium",
+        "press inline-flex items-center justify-center gap-1.5 rounded-full font-medium",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-st-ring",
         "disabled:pointer-events-none disabled:opacity-50",
         VARIANTS[variant],

@@ -95,44 +95,44 @@
 /* ── 라이트(기본값) ─────────────────────────────────────────────────────────── */
 :root {
   --st-background: oklch(1 0 0);
-  --st-canvas: oklch(0.984 0.003 247.86);
-  --st-foreground: oklch(0.145 0.04 265.75);
+  --st-canvas: oklch(0.984 0 0);
+  --st-foreground: oklch(0.145 0 0);
   --st-card: oklch(1 0 0);
-  --st-card-foreground: oklch(0.145 0.04 265.75);
+  --st-card-foreground: oklch(0.145 0 0);
   --st-popover: oklch(1 0 0);
-  --st-popover-foreground: oklch(0.145 0.04 265.75);
-  --st-primary: oklch(0.511 0.23 276.97);
-  --st-primary-foreground: oklch(0.97 0.014 254.6);
-  --st-secondary: oklch(0.967 0.007 248.14);
-  --st-secondary-foreground: oklch(0.21 0.04 265.57);
-  --st-muted: oklch(0.97 0.006 247.89);
-  --st-muted-foreground: oklch(0.556 0.041 257.41);
-  --st-accent: oklch(0.97 0.006 247.89);
-  --st-accent-foreground: oklch(0.205 0.04 265.75);
+  --st-popover-foreground: oklch(0.145 0 0);
+  --st-primary: oklch(0.25 0 0);
+  --st-primary-foreground: oklch(0.97 0 0);
+  --st-secondary: oklch(0.967 0 0);
+  --st-secondary-foreground: oklch(0.21 0 0);
+  --st-muted: oklch(0.97 0 0);
+  --st-muted-foreground: oklch(0.556 0 0);
+  --st-accent: oklch(0.97 0 0);
+  --st-accent-foreground: oklch(0.205 0 0);
   --st-destructive: oklch(0.577 0.245 27.33);
-  --st-destructive-foreground: oklch(0.985 0.003 247.86);
+  --st-destructive-foreground: oklch(0.985 0 0);
   --st-success: oklch(0.637 0.139 159.37);
   --st-warning: oklch(0.769 0.165 70.08);
-  --st-info: oklch(0.588 0.139 241.97);
-  --st-pending: oklch(0.711 0.035 256.79);
-  --st-border: oklch(0.922 0.013 255.21);
-  --st-input: oklch(0.922 0.013 255.21);
-  --st-ring: oklch(0.708 0.035 256.8);
+  --st-info: oklch(0.588 0 0);
+  --st-pending: oklch(0.711 0 0);
+  --st-border: oklch(0.922 0 0);
+  --st-input: oklch(0.922 0 0);
+  --st-ring: oklch(0.45 0 0);
 
-  --st-chart-1: oklch(0.809 0.105 251.81);
-  --st-chart-2: oklch(0.623 0.214 259.82);
-  --st-chart-3: oklch(0.546 0.245 262.88);
-  --st-chart-4: oklch(0.488 0.243 264.38);
-  --st-chart-5: oklch(0.424 0.199 265.64);
+  --st-chart-1: oklch(0.809 0 0);
+  --st-chart-2: oklch(0.623 0 0);
+  --st-chart-3: oklch(0.546 0 0);
+  --st-chart-4: oklch(0.488 0 0);
+  --st-chart-5: oklch(0.424 0 0);
 
-  --st-sidebar: oklch(0.985 0.003 247.86);
-  --st-sidebar-foreground: oklch(0.145 0.04 265.75);
-  --st-sidebar-primary: oklch(0.546 0.245 262.88);
-  --st-sidebar-primary-foreground: oklch(0.97 0.014 254.6);
-  --st-sidebar-accent: oklch(0.97 0.006 247.89);
-  --st-sidebar-accent-foreground: oklch(0.205 0.04 265.75);
-  --st-sidebar-border: oklch(0.922 0.013 255.21);
-  --st-sidebar-ring: oklch(0.708 0.035 256.8);
+  --st-sidebar: oklch(0.985 0 0);
+  --st-sidebar-foreground: oklch(0.145 0 0);
+  --st-sidebar-primary: oklch(0.25 0 0);
+  --st-sidebar-primary-foreground: oklch(0.97 0 0);
+  --st-sidebar-accent: oklch(0.97 0 0);
+  --st-sidebar-accent-foreground: oklch(0.205 0 0);
+  --st-sidebar-border: oklch(0.922 0 0);
+  --st-sidebar-ring: oklch(0.45 0 0);
 
   --st-button-secondary-border: var(--st-border);
   --st-button-secondary-bg: var(--st-background);
@@ -165,47 +165,47 @@
    셀렉터가 서로 배타적이라 어느 쪽이 이길지 고민할 필요가 없다(위 ⚠ 참고). */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
-    --st-background: oklch(0.145 0.04 265.75);
-    --st-canvas: oklch(0.145 0.04 265.75);
-    --st-foreground: oklch(0.985 0.003 247.86);
-    --st-card: oklch(0.205 0.04 265.75);
-    --st-card-foreground: oklch(0.985 0.003 247.86);
-    --st-popover: oklch(0.205 0.04 265.75);
-    --st-popover-foreground: oklch(0.985 0.003 247.86);
-    --st-primary: oklch(0.62 0.23 276.97);
-    --st-primary-foreground: oklch(0.97 0.014 254.6);
-    --st-secondary: oklch(0.274 0.037 260.47);
-    --st-secondary-foreground: oklch(0.985 0.003 247.86);
-    --st-muted: oklch(0.269 0.037 260.87);
-    --st-muted-foreground: oklch(0.708 0.035 256.8);
-    --st-accent: oklch(0.269 0.037 260.87);
-    --st-accent-foreground: oklch(0.985 0.003 247.86);
+    --st-background: oklch(0.145 0 0);
+    --st-canvas: oklch(0.145 0 0);
+    --st-foreground: oklch(0.985 0 0);
+    --st-card: oklch(0.205 0 0);
+    --st-card-foreground: oklch(0.985 0 0);
+    --st-popover: oklch(0.205 0 0);
+    --st-popover-foreground: oklch(0.985 0 0);
+    --st-primary: oklch(0.95 0 0);
+    --st-primary-foreground: oklch(0.205 0 0);
+    --st-secondary: oklch(0.274 0 0);
+    --st-secondary-foreground: oklch(0.985 0 0);
+    --st-muted: oklch(0.269 0 0);
+    --st-muted-foreground: oklch(0.708 0 0);
+    --st-accent: oklch(0.269 0 0);
+    --st-accent-foreground: oklch(0.985 0 0);
     --st-destructive: oklch(0.704 0.191 22.22);
-    --st-destructive-foreground: oklch(0.985 0.003 247.86);
+    --st-destructive-foreground: oklch(0.985 0 0);
     --st-success: oklch(0.7 0.139 159.37);
     --st-warning: oklch(0.82 0.165 70.08);
-    --st-info: oklch(0.678 0.118 241.97);
-    --st-pending: oklch(0.741 0.035 256.79);
+    --st-info: oklch(0.678 0 0);
+    --st-pending: oklch(0.741 0 0);
     --st-border: oklch(1 0 0 / 10%);
     --st-input: oklch(1 0 0 / 15%);
-    --st-ring: oklch(0.556 0.041 257.41);
+    --st-ring: oklch(0.72 0 0);
 
     /* 다크에서는 램프를 통째로 밝은 쪽으로 올린다 — 라이트 값을 그대로 쓰면 뒤쪽 계열(4·5)이
        어두운 배경에 묻혀 계열 구분이 사라진다. */
-    --st-chart-1: oklch(0.809 0.105 251.81);
-    --st-chart-2: oklch(0.72 0.16 259.82);
-    --st-chart-3: oklch(0.66 0.19 262.88);
-    --st-chart-4: oklch(0.6 0.2 264.38);
-    --st-chart-5: oklch(0.54 0.18 265.64);
+    --st-chart-1: oklch(0.809 0 0);
+    --st-chart-2: oklch(0.72 0 0);
+    --st-chart-3: oklch(0.66 0 0);
+    --st-chart-4: oklch(0.6 0 0);
+    --st-chart-5: oklch(0.54 0 0);
 
-    --st-sidebar: oklch(0.205 0.04 265.75);
-    --st-sidebar-foreground: oklch(0.985 0.003 247.86);
-    --st-sidebar-primary: oklch(0.623 0.214 259.82);
-    --st-sidebar-primary-foreground: oklch(0.97 0.014 254.6);
-    --st-sidebar-accent: oklch(0.269 0.037 260.87);
-    --st-sidebar-accent-foreground: oklch(0.985 0.003 247.86);
+    --st-sidebar: oklch(0.205 0 0);
+    --st-sidebar-foreground: oklch(0.985 0 0);
+    --st-sidebar-primary: oklch(0.95 0 0);
+    --st-sidebar-primary-foreground: oklch(0.205 0 0);
+    --st-sidebar-accent: oklch(0.269 0 0);
+    --st-sidebar-accent-foreground: oklch(0.985 0 0);
     --st-sidebar-border: oklch(1 0 0 / 10%);
-    --st-sidebar-ring: oklch(0.556 0.041 257.41);
+    --st-sidebar-ring: oklch(0.72 0 0);
 
     --st-button-secondary-border: var(--st-input);
     --st-button-secondary-bg: color-mix(in oklch, var(--st-input) 30%, transparent);
@@ -235,47 +235,47 @@
 }
 
 [data-theme="dark"] {
-  --st-background: oklch(0.145 0.04 265.75);
-  --st-canvas: oklch(0.145 0.04 265.75);
-  --st-foreground: oklch(0.985 0.003 247.86);
-  --st-card: oklch(0.205 0.04 265.75);
-  --st-card-foreground: oklch(0.985 0.003 247.86);
-  --st-popover: oklch(0.205 0.04 265.75);
-  --st-popover-foreground: oklch(0.985 0.003 247.86);
-  --st-primary: oklch(0.62 0.23 276.97);
-  --st-primary-foreground: oklch(0.97 0.014 254.6);
-  --st-secondary: oklch(0.274 0.037 260.47);
-  --st-secondary-foreground: oklch(0.985 0.003 247.86);
-  --st-muted: oklch(0.269 0.037 260.87);
-  --st-muted-foreground: oklch(0.708 0.035 256.8);
-  --st-accent: oklch(0.269 0.037 260.87);
-  --st-accent-foreground: oklch(0.985 0.003 247.86);
+  --st-background: oklch(0.145 0 0);
+  --st-canvas: oklch(0.145 0 0);
+  --st-foreground: oklch(0.985 0 0);
+  --st-card: oklch(0.205 0 0);
+  --st-card-foreground: oklch(0.985 0 0);
+  --st-popover: oklch(0.205 0 0);
+  --st-popover-foreground: oklch(0.985 0 0);
+  --st-primary: oklch(0.95 0 0);
+  --st-primary-foreground: oklch(0.205 0 0);
+  --st-secondary: oklch(0.274 0 0);
+  --st-secondary-foreground: oklch(0.985 0 0);
+  --st-muted: oklch(0.269 0 0);
+  --st-muted-foreground: oklch(0.708 0 0);
+  --st-accent: oklch(0.269 0 0);
+  --st-accent-foreground: oklch(0.985 0 0);
   --st-destructive: oklch(0.704 0.191 22.22);
-  --st-destructive-foreground: oklch(0.985 0.003 247.86);
+  --st-destructive-foreground: oklch(0.985 0 0);
   --st-success: oklch(0.7 0.139 159.37);
   --st-warning: oklch(0.82 0.165 70.08);
-  --st-info: oklch(0.678 0.118 241.97);
-  --st-pending: oklch(0.741 0.035 256.79);
+  --st-info: oklch(0.678 0 0);
+  --st-pending: oklch(0.741 0 0);
   --st-border: oklch(1 0 0 / 10%);
   --st-input: oklch(1 0 0 / 15%);
-  --st-ring: oklch(0.556 0.041 257.41);
+  --st-ring: oklch(0.72 0 0);
 
   /* 다크에서는 램프를 통째로 밝은 쪽으로 올린다 — 라이트 값을 그대로 쓰면 뒤쪽 계열(4·5)이
      어두운 배경에 묻혀 계열 구분이 사라진다. */
-  --st-chart-1: oklch(0.809 0.105 251.81);
-  --st-chart-2: oklch(0.72 0.16 259.82);
-  --st-chart-3: oklch(0.66 0.19 262.88);
-  --st-chart-4: oklch(0.6 0.2 264.38);
-  --st-chart-5: oklch(0.54 0.18 265.64);
+  --st-chart-1: oklch(0.809 0 0);
+  --st-chart-2: oklch(0.72 0 0);
+  --st-chart-3: oklch(0.66 0 0);
+  --st-chart-4: oklch(0.6 0 0);
+  --st-chart-5: oklch(0.54 0 0);
 
-  --st-sidebar: oklch(0.205 0.04 265.75);
-  --st-sidebar-foreground: oklch(0.985 0.003 247.86);
-  --st-sidebar-primary: oklch(0.623 0.214 259.82);
-  --st-sidebar-primary-foreground: oklch(0.97 0.014 254.6);
-  --st-sidebar-accent: oklch(0.269 0.037 260.87);
-  --st-sidebar-accent-foreground: oklch(0.985 0.003 247.86);
+  --st-sidebar: oklch(0.205 0 0);
+  --st-sidebar-foreground: oklch(0.985 0 0);
+  --st-sidebar-primary: oklch(0.95 0 0);
+  --st-sidebar-primary-foreground: oklch(0.205 0 0);
+  --st-sidebar-accent: oklch(0.269 0 0);
+  --st-sidebar-accent-foreground: oklch(0.985 0 0);
   --st-sidebar-border: oklch(1 0 0 / 10%);
-  --st-sidebar-ring: oklch(0.556 0.041 257.41);
+  --st-sidebar-ring: oklch(0.72 0 0);
 
   --st-button-secondary-border: var(--st-input);
   --st-button-secondary-bg: color-mix(in oklch, var(--st-input) 30%, transparent);

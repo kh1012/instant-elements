@@ -111,7 +111,7 @@ function ComponentCardImpl({
         content-visibility:auto — 화면 밖 썸네일의 렌더·애니메이션을 브라우저가 건너뛴다.
         고정 높이라 레이아웃 시프트 없이 오프스크린 부하만 덜어낸다.
       */}
-      <div className="preview-surface pointer-events-none flex h-40 items-start justify-center overflow-hidden rounded-lg bg-st-background p-4 [content-visibility:auto]">
+      <div className="pointer-events-none flex h-40 items-start justify-center overflow-hidden rounded-lg bg-st-background p-4 [content-visibility:auto]">
         {inView ? (
           <div className="anim-fade-in flex size-full items-start justify-center">
             <SafePreview name={entry.name} />
