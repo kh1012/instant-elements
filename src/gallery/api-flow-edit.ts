@@ -9,6 +9,7 @@ import { isSameOrigin, json, readBody, type Req, type Res } from "./http.js";
  *
  * `POST /api/flows/<slug>/settings` — 시작 화면·프레임.
  * `POST /api/flows/<slug>/edge` — 이미 있는 연결의 **목적지 변경**.
+ * `POST /api/flows/<slug>/link` — 새 핫스팟(연결) 만들기·지우기.
  *
  * 지금까지 흐름은 CLI 로만 고칠 수 있었다. 시연 직전에 "시작을 이 화면으로 바꿔줘"가 나오면
  * 터미널로 나가야 했는데, 그건 시연 준비 중에 가장 하기 싫은 일이다.
@@ -23,7 +24,8 @@ export function createFlowEditApi(config: ResolvedConfig) {
     handle(req: Req, res: Res, path: string, actor: string): boolean {
       const settings = /^\/api\/flows\/([^/]+)\/settings$/.exec(path);
       const edge = /^\/api\/flows\/([^/]+)\/edge$/.exec(path);
-      if (!settings && !edge) return false;
+      const link = /^\/api\/flows\/([^/]+)\/link$/.exec(path);
+      if (!settings && !edge && !link) return false;
       if (req.method !== "POST") return false;
 
       if (!isSameOrigin(req)) {
@@ -31,7 +33,7 @@ export function createFlowEditApi(config: ResolvedConfig) {
         return true;
       }
 
-      const slug = decodeURIComponent((settings ?? edge)?.[1] ?? "");
+      const slug = decodeURIComponent((settings ?? edge ?? link)?.[1] ?? "");
       if (!isValidSlug(slug)) {
         json(res, { error: "invalid slug" }, 400);
         return true;
@@ -40,6 +42,69 @@ export function createFlowEditApi(config: ResolvedConfig) {
       void readBody(req)
         .then((body) => {
           const current = readFlow(config.flowsDir, slug);
+
+          if (link) {
+            /*
+             * 핫스팟 하나 = 연결 하나. id 를 CLI(`ie flow link`)와 **같은 규칙**으로 만든다 —
+             * 다르게 만들면 같은 자리에 두 연결이 생겨 시연에서 어느 쪽이 이기는지 알 수 없다.
+             */
+            const input = body as {
+              fromSlug?: unknown;
+              nodeId?: unknown;
+              to?: unknown;
+              action?: unknown;
+              value?: unknown;
+              remove?: unknown;
+            };
+            if (typeof input.fromSlug !== "string" || typeof input.nodeId !== "string") {
+              return json(res, { error: "fromSlug 와 nodeId 가 필요합니다." }, 400);
+            }
+            if (!current.screens.some((s) => s.slug === input.fromSlug)) {
+              return json(res, { error: `편입되지 않은 화면입니다: ${input.fromSlug}` }, 400);
+            }
+
+            const action = typeof input.action === "string" && input.action ? input.action : undefined;
+            const value = typeof input.value === "string" && input.value ? input.value : undefined;
+            const id = `${input.fromSlug}:${input.nodeId}${action ? `:${action}` : ""}${value ? `=${value}` : ""}→${input.to ?? ""}`;
+
+            if (input.remove === true) {
+              const flow = writeFlow(store(actor), slug, (existing) => ({
+                ...existing,
+                edges: existing.edges.filter(
+                  (e) => !(e.from.slug === input.fromSlug && e.from.nodeId === input.nodeId),
+                ),
+              }));
+              return json(res, { slug, edges: flow.edges });
+            }
+
+            if (typeof input.to !== "string") {
+              return json(res, { error: "to 가 필요합니다." }, 400);
+            }
+            if (!current.screens.some((s) => s.slug === input.to)) {
+              return json(res, { error: `편입되지 않은 화면입니다: ${input.to}` }, 400);
+            }
+
+            const flow = writeFlow(store(actor), slug, (existing) => ({
+              ...existing,
+              // 같은 자리에 이미 있으면 갈아끼운다 — 한 노드가 두 곳으로 가면 시연이 흔들린다.
+              edges: [
+                ...existing.edges.filter(
+                  (e) => !(e.from.slug === input.fromSlug && e.from.nodeId === input.nodeId),
+                ),
+                {
+                  id,
+                  from: {
+                    slug: input.fromSlug as string,
+                    nodeId: input.nodeId as string,
+                    ...(action ? { action } : {}),
+                    ...(value ? { value } : {}),
+                  },
+                  to: input.to as string,
+                },
+              ],
+            }));
+            return json(res, { slug, edges: flow.edges });
+          }
 
           if (edge) {
             /*

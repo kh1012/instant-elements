@@ -3,7 +3,7 @@ import { resolveFrame, type PageData } from "instant-elements/page";
 import { Button } from "../components/Button";
 import { FlowMap } from "../components/FlowMap";
 import { FlowSettings } from "./FlowRoute.settings";
-import { retargetFlowEdge } from "../lib/api";
+import { linkFlowHotspot, retargetFlowEdge } from "../lib/api";
 import { cn } from "../lib/cn";
 import { useAsync } from "../lib/useAsync";
 import { PageFrame } from "../page/PageFrame";
@@ -52,6 +52,9 @@ export function FlowRoute({ slug }: { slug: string }) {
   const [current, setCurrent] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [pickedEdge, setPickedEdge] = useState<string | null>(null);
+  /** 배선 모드 — 켜면 노드를 눌러도 넘어가지 않고 "여기서 어디로 갈까"를 묻는다. */
+  const [wiring, setWiring] = useState(false);
+  const [wiringNode, setWiringNode] = useState<string | null>(null);
   const [mode, setMode] = useState<"play" | "map">("play");
   const [hint, setHint] = useState(false);
 
@@ -154,6 +157,20 @@ export function FlowRoute({ slug }: { slug: string }) {
               <Button size="sm" onClick={() => setHint((v) => !v)}>
                 {hint ? "핫스팟 숨기기" : "핫스팟 보기"}
               </Button>
+              {/*
+                배선 모드에서는 누르는 뜻이 "넘어가기" → "여기를 눌렀을 때 어디로 갈지 정하기"로
+                바뀐다. 같은 화면에서 두 뜻이 섞이면 시연 중 실수로 배선을 고치게 된다.
+              */}
+              <Button
+                size="sm"
+                variant={wiring ? "primary" : "outline"}
+                onClick={() => {
+                  setWiring((v) => !v);
+                  setWiringNode(null);
+                }}
+              >
+                {wiring ? "배선 끝내기" : "배선하기"}
+              </Button>
               <Button
                 size="sm"
                 onClick={() => setCurrent(detail.flow.start ?? detail.screens[0]?.slug ?? null)}
@@ -228,16 +245,47 @@ export function FlowRoute({ slug }: { slug: string }) {
               "column",
               {
                 onNodeClick: (node) => {
-                  if (node.props.id) go(node.props.id);
+                  const id = node.props.id;
+                  if (!id) return;
+                  if (wiring) setWiringNode(id);
+                  else go(id);
                 },
-                activeId: null,
+                activeId: wiringNode,
                 // 연결된 자리를 표시한다 — 시연 중 "어디를 누르면 되나"를 물어보지 않아도 되게.
                 // 번호는 순서 의미가 없으므로 모두 같은 값을 준다(존재 자체가 신호다).
-                markers: hint ? new Map([...exits.keys()].map((id) => [id, 0])) : new Map(),
+                // 배선 중에는 늘 표시한다 — 어디가 이미 연결됐는지 보면서 정해야 한다.
+                markers:
+                  hint || wiring ? new Map([...exits.keys()].map((id) => [id, 0])) : new Map(),
               },
               true,
             )}
           </PageFrame>
+
+          {wiring ? (
+            <HotspotPanel
+              nodeId={wiringNode}
+              currentTo={wiringNode ? (exits.get(wiringNode) ?? null) : null}
+              screens={detail.screens.map((s) => ({ slug: s.slug, title: s.title }))}
+              onPick={(to) => {
+                if (!active || !wiringNode) return;
+                void linkFlowHotspot(slug, { fromSlug: active, nodeId: wiringNode, to }).then(() => {
+                  setWiringNode(null);
+                  state.reload();
+                });
+              }}
+              onRemove={() => {
+                if (!active || !wiringNode) return;
+                void linkFlowHotspot(slug, {
+                  fromSlug: active,
+                  nodeId: wiringNode,
+                  remove: true,
+                }).then(() => {
+                  setWiringNode(null);
+                  state.reload();
+                });
+              }}
+            />
+          ) : null}
         </div>
       )}
     </div>
@@ -302,6 +350,71 @@ function EdgeTargetPicker({
       >
         닫기
       </button>
+    </div>
+  );
+}
+
+/**
+ * 핫스팟 배선 — "이 자리를 누르면 어디로 갈까".
+ *
+ * 화면 위 팝오버가 아니라 프레임 아래 줄에 둔다. 프레임은 최대 2560px 라 위에 띄우면 스크롤을
+ * 따라 화면 밖으로 밀리고, 지목한 요소를 가리기도 한다.
+ */
+function HotspotPanel({
+  nodeId,
+  currentTo,
+  screens,
+  onPick,
+  onRemove,
+}: {
+  nodeId: string | null;
+  currentTo: string | null;
+  screens: { slug: string; title: string }[];
+  onPick: (to: string) => void;
+  onRemove: () => void;
+}) {
+  if (!nodeId) {
+    return (
+      <p className="mt-3 text-step-n2 text-st-muted-foreground">
+        연결할 자리를 화면에서 눌러 주세요. 이미 연결된 자리에는 표시가 붙어 있습니다.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-st-border bg-st-card px-4 py-3">
+      <span className="text-step-n2 text-st-muted-foreground">
+        <code className="font-mono">{nodeId}</code> 를 누르면 →
+      </span>
+      {screens.map((screen) => {
+        const current = screen.slug === currentTo;
+        return (
+          <button
+            key={screen.slug}
+            type="button"
+            disabled={current}
+            onClick={() => onPick(screen.slug)}
+            className={cn(
+              "press rounded-full border px-3 py-1 text-step-n2",
+              current
+                ? "cursor-default border-st-primary bg-st-primary text-st-primary-foreground"
+                : "border-st-border hover:bg-st-muted/60",
+            )}
+          >
+            {screen.title}
+            {current ? " (지금)" : ""}
+          </button>
+        );
+      })}
+      {currentTo ? (
+        <button
+          type="button"
+          onClick={onRemove}
+          className="text-step-n2 text-st-destructive underline"
+        >
+          연결 끊기
+        </button>
+      ) : null}
     </div>
   );
 }

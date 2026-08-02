@@ -185,3 +185,11 @@ export function retargetFlowEdge(
 ): Promise<{ slug: string; edges: unknown[] }> {
   return send(`/api/flows/${encodeURIComponent(slug)}/edge`, "POST", { id, to });
 }
+
+/** 핫스팟(연결) 만들기. `remove: true` 면 그 자리의 연결을 지운다. */
+export function linkFlowHotspot(
+  slug: string,
+  input: { fromSlug: string; nodeId: string; to?: string; action?: string; remove?: boolean },
+): Promise<{ slug: string; edges: unknown[] }> {
+  return send(`/api/flows/${encodeURIComponent(slug)}/link`, "POST", input);
+}
