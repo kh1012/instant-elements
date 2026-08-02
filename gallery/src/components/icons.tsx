@@ -252,3 +252,32 @@ export function ResetIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   );
 }
+
+/** 이전 컴포넌트. */
+export function ChevronLeftIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} {...props}>
+      <path d="m15 18-6-6 6-6" />
+    </svg>
+  );
+}
+
+/** 다음 컴포넌트. */
+export function ChevronRightIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} {...props}>
+      <path d="m9 18 6-6-6-6" />
+    </svg>
+  );
+}
+
+/** 더 보기 — 세로 점 셋. */
+export function KebabIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="12" cy="5" r="1" fill="currentColor" />
+      <circle cx="12" cy="12" r="1" fill="currentColor" />
+      <circle cx="12" cy="19" r="1" fill="currentColor" />
+    </svg>
+  );
+}

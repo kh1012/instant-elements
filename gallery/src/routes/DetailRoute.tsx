@@ -1,41 +1,49 @@
+import { useState } from "react";
 import entries from "virtual:ie/entries";
 import historyByName from "virtual:ie/history";
 import galleryConfig from "virtual:ie/config";
-import type { Entry, HistoryEvent } from "instant-elements/registry";
+import type { ElementStatus } from "instant-elements/registry";
 import { CodeBlock } from "../components/CodeBlock";
 import { CopyButton } from "../components/CopyButton";
 import { DemoFrame } from "../components/DemoFrame";
 import { SafePreview } from "../components/SafePreview";
-import { CategoryBadge, StatusBadge } from "../components/StatusBadge";
-import { formatAt, relativeTime } from "../lib/format";
-import { CopyIcon, SplitIcon, StarIcon, WandIcon } from "../components/icons";
-import { Tooltip } from "../components/Tooltip";
-import { togglePin, usePins } from "../lib/pins";
+import { useAgent } from "../lib/agent-store";
+import { usePins } from "../lib/pins";
 import { findRelated } from "../lib/search";
-import { cn } from "../lib/cn";
-import {
-  buildIntegrationPrompt,
-  buildModifyPrompt,
-  buildSplitPrompt,
-  buildUsageExample,
-  componentNameOf,
-  importPathFor,
-  type PromptContext,
-} from "../lib/prompt";
+import { buildUsageExample, type PromptContext } from "../lib/prompt";
 import { Link } from "../router";
-import { DetailRunControl } from "./DetailRunControl";
+import { DetailHeader } from "./DetailRoute.header";
+import { DetailHistory } from "./DetailRoute.history";
+import { DetailPropsPanel } from "./DetailRoute.props-panel";
 
-const ACTION_LABEL: Record<HistoryEvent["action"], string> = {
-  created: "생성",
-  modified: "수정",
-  recommended: "재사용 추천",
-};
-
+/**
+ * 컴포넌트 상세.
+ *
+ * ── 섹션 순서를 바꿨다
+ * 히스토리가 맨 아래였다. 이 도구에서 상세를 여는 가장 흔한 이유가 "이거 언제 뭐가 바뀌었지"인데,
+ * 그 답을 보려면 스크롤을 끝까지 내려야 했다. 좌측 컬럼 맨 위로 올렸다.
+ *
+ * 사용 예제는 2컬럼 **바깥 아래**로 내리고 한 줄로 눌렀다 — 코드 한 줄이 세로 공간을 크게
+ * 먹으면서 정작 자주 보는 값은 아니다. 관련 컴포넌트가 맨 끝이라 "다음에 볼 것"으로 이어진다.
+ */
 export function DetailRoute({ name }: { name: string }) {
   const pins = usePins();
-  const index = entries.findIndex((e) => e.name === name);
-  const entry = index >= 0 ? entries[index] : undefined;
+  const { runningFor } = useAgent();
+  const entry = entries.find((e) => e.name === name);
+
+  /*
+   * 상태는 서버에서 바뀌지만 `entries` 는 **빌드 타임에 굳은 값**이라 그대로다. 바꾼 직후의
+   * 화면이 옛 상태를 보여 주지 않도록 로컬로 덮어쓴다(새로고침하면 서버 값과 만난다).
+   */
+  const [statusOverride, setStatusOverride] = useState<ElementStatus | null>(null);
+
   if (!entry) return <NotFound name={name} />;
+
+  const view = statusOverride
+    ? { ...entry, meta: { ...entry.meta, status: statusOverride } }
+    : entry;
+
+  const running = runningFor(`/c/${entry.name}`) !== null;
   const pinned = pins.includes(entry.name);
 
   // 쓰이는 곳 — composedOf 의 역방향. 이 하네스의 목적이 재사용이라, "이게 어디서 쓰이나"를
@@ -43,8 +51,6 @@ export function DetailRoute({ name }: { name: string }) {
   const usedBy = entries.filter((e) => e.meta.composedOf?.includes(entry.name));
   // 상세가 막다른 길이 되지 않게 — 여기서 옆으로 새는 길을 열어 준다.
   const related = findRelated(entries, entry);
-  const prev = entries[index - 1];
-  const next = entries[index + 1];
 
   const ctx: PromptContext = {
     importAlias: galleryConfig.importAlias,
@@ -54,282 +60,74 @@ export function DetailRoute({ name }: { name: string }) {
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-8">
-      <Link
-        to="/"
-        className="press text-step-n1 text-st-muted-foreground hover:text-st-foreground"
-      >
-        ← 라이브러리
-      </Link>
+      <DetailHeader entry={view} ctx={ctx} pinned={pinned} running={running} />
 
-      <header className="mt-4 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-step-2 font-semibold">{entry.name}</h1>
-            <CategoryBadge category={entry.meta.category} />
-            <StatusBadge status={entry.meta.status} />
-          </div>
-          <p className="mt-1.5 max-w-2xl text-step-n1 text-st-muted-foreground">
-            {entry.meta.summary}
-          </p>
-          {/* 목록으로 돌아가지 않고 옆 컴포넌트로 — 훑어볼 때 왕복이 절반으로 준다. */}
-          <div className="mt-2 flex items-center gap-2 text-step-n2">
-            {prev ? (
-              <Link to={`/c/${prev.name}`} className="press text-st-muted-foreground hover:text-st-foreground">
-                ← {prev.name}
-              </Link>
-            ) : null}
-            {prev && next ? <span className="text-st-border">·</span> : null}
-            {next ? (
-              <Link to={`/c/${next.name}`} className="press text-st-muted-foreground hover:text-st-foreground">
-                {next.name} →
-              </Link>
-            ) : null}
-          </div>
+      {/*
+        `previewZoom` — 기본은 1(실제 크기)이다. 아주 작은 컴포넌트(뱃지·아이콘)는 프레임 안에서
+        점처럼 보여 판단이 안 되므로 엔트리에서 키울 수 있게 열어 둔다.
+        `w-full` 래퍼가 필요한 이유: zoom 안에서 폭을 안 잡아 주면 내용에 맞춰 줄어들어(shrink-to-fit)
+        가운데 정렬이 무너진다.
+      */}
+      <DemoFrame className="mt-6 min-h-80">
+        <div
+          className="flex w-full items-center justify-center"
+          style={{ zoom: entry.meta.previewZoom ?? 1 }}
+        >
+          <SafePreview name={entry.name} />
         </div>
-
-        {/*
-          프롬프트 3종은 '이 컴포넌트로 무엇을 시킬 것인가' 라는 같은 축의 변형이라 한 덩어리로
-          묶고 아이콘으로 가른다. 라벨 3개를 늘어놓으면 줄을 다 먹고, 케밥에 넣으면 묻힌다.
-          툴팁에는 이름이 아니라 **용도**를 적는다 — 이름만으로는 무엇이 다른지 여전히 모른다.
-          _근거: 상류 하네스 23f4ff6b0 · 5a5b5098b._
-        */}
-        <div className="flex items-center gap-2">
-          <Tooltip content={pinned ? "고정 해제" : "자주 쓰는 것으로 고정"}>
-            <button
-              type="button"
-              aria-label={pinned ? "고정 해제" : "고정"}
-              aria-pressed={pinned}
-              onClick={() => togglePin(entry.name)}
-              className={cn(
-                "press inline-flex h-9 w-9 items-center justify-center rounded-md",
-                "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-st-ring",
-                pinned
-                  ? "text-st-warning"
-                  : "text-st-muted-foreground hover:bg-st-button-ghost-hover-bg",
-              )}
-            >
-              <StarIcon filled={pinned} />
-            </button>
-          </Tooltip>
-
-          <div className="flex items-center gap-0.5 rounded-md border border-st-border bg-st-card p-0.5">
-          <CopyButton
-            icon={<CopyIcon />}
-            label="통합 프롬프트 복사"
-            copiedLabel="복사됨"
-            tooltip="다른 화면에 이 컴포넌트를 가져다 쓰라고 시킨다"
-            text={buildIntegrationPrompt(entry, ctx)}
-          />
-          <CopyButton
-            icon={<WandIcon />}
-            label="수정 프롬프트 복사"
-            copiedLabel="복사됨"
-            tooltip="이 컴포넌트 자체를 고치라고 시킨다 (요청사항만 적으면 된다)"
-            text={buildModifyPrompt(entry, ctx)}
-          />
-          <CopyButton
-            icon={<SplitIcon />}
-            label="분할 프롬프트 복사"
-            copiedLabel="복사됨"
-            tooltip="너무 커진 이 컴포넌트를 조각으로 쪼개 다시 조립하라고 시킨다"
-            text={buildSplitPrompt(entry, ctx)}
-          />
-          </div>
-
-          {/* 에이전트가 켜진 갤러리에서만 나타난다 — 꺼져 있으면 위 복사 버튼이 유일한 길이다. */}
-          <DetailRunControl entry={entry} ctx={ctx} />
-        </div>
-      </header>
-
-      <DemoFrame className="mt-6">
-        <SafePreview name={entry.name} />
       </DemoFrame>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <div className="flex flex-col gap-6">
-          <section>
-            <h2 className="text-step-0 font-semibold">사용 예제</h2>
-            <CodeBlock className="mt-2" code={buildUsageExample(entry, ctx)} />
-          </section>
-
-          {related.length > 0 ? (
-            <section>
-              <h2 className="text-step-0 font-semibold">관련 컴포넌트</h2>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {related.map((item) => (
-                  <Link
-                    key={item.name}
-                    to={`/c/${item.name}`}
-                    className="press rounded-md border border-st-border bg-st-card px-2.5 py-1.5 text-step-n2 hover:border-st-ring"
-                  >
-                    <span className="font-medium">{item.name}</span>
-                    <span className="ml-1.5 text-st-muted-foreground">{item.meta.category}</span>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          <section>
-            <h2 className="text-step-0 font-semibold">
-              히스토리 <span className="text-st-muted-foreground">{history.length}건</span>
-            </h2>
-            {history.length === 0 ? (
-              <p className="mt-2 text-step-n1 text-st-muted-foreground">
-                아직 기록이 없습니다.
-              </p>
-            ) : (
-              <ol className="mt-3 flex flex-col gap-3">
-                {history.map((event, index) => (
-                  <Timeline key={`${event.at}-${index}`} event={event} />
-                ))}
-              </ol>
-            )}
-          </section>
-        </div>
-
-        <aside className="flex flex-col gap-3 rounded-lg border border-st-border bg-st-card p-4">
-          <Meta label="import">
-            <code className="break-all text-step-n2">{importPathFor(entry, ctx)}</code>
-          </Meta>
-          <Meta label="export">
-            <code className="text-step-n2">{componentNameOf(entry)}</code>
-          </Meta>
-          <Meta label="코드">
-            <code className="break-all text-step-n2">{entry.files[0]?.path ?? "-"}</code>
-          </Meta>
-          <Meta label="역할">{entry.meta.intent}</Meta>
-          <PropsMeta entry={entry} />
-          {entry.meta.composedOf?.length ? (
-            <Meta label="구성">
-              <span className="flex flex-wrap gap-1.5">
-                {entry.meta.composedOf.map((child) => (
-                  <Link
-                    key={child}
-                    to={`/c/${child}`}
-                    className="press rounded-sm bg-st-muted px-1.5 py-0.5 text-step-n2 hover:bg-st-interactive-muted-hover-bg"
-                  >
-                    {child}
-                  </Link>
-                ))}
-              </span>
-            </Meta>
-          ) : null}
-          {usedBy.length > 0 ? (
-            <Meta label="쓰이는 곳">
-              <span className="flex flex-wrap gap-1.5">
-                {usedBy.map((parent) => (
-                  <Link
-                    key={parent.name}
-                    to={`/c/${parent.name}`}
-                    className="press rounded-sm bg-st-muted px-1.5 py-0.5 text-step-n2 hover:bg-st-interactive-muted-hover-bg"
-                  >
-                    {parent.name}
-                  </Link>
-                ))}
-              </span>
-            </Meta>
-          ) : null}
-          {entry.meta.tokens?.length ? (
-            <Meta label="토큰">
-              <span className="text-step-n2">{entry.meta.tokens.join(", ")}</span>
-            </Meta>
-          ) : null}
-          <Meta label="검색어">
-            <span className="text-step-n2">{entry.meta.keywords.join(", ")}</span>
-          </Meta>
-          <Meta label="만든이">
-            {entry.meta.createdBy} · {formatAt(entry.meta.createdAt)}
-          </Meta>
-          {/* 밖에서 가져온 것이면 크레딧을 남긴다 — 이 자리에 없으면 출처가 히스토리에만 묻힌다. */}
-          {entry.meta.origin ? (
-            <Meta label="출처">
-              <span className="flex flex-col gap-0.5">
-                <span>
-                  {entry.meta.origin.publishedBy ? `@${entry.meta.origin.publishedBy}` : "마켓플레이스"}
-                  {entry.meta.origin.publishedAt
-                    ? ` · ${formatAt(entry.meta.origin.publishedAt)} 발행`
-                    : ""}
-                </span>
-                <a
-                  href={entry.meta.origin.source}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="press break-all text-step-n2 text-st-muted-foreground underline hover:text-st-foreground"
-                >
-                  {entry.meta.origin.source}
-                </a>
-              </span>
-            </Meta>
-          ) : null}
-        </aside>
+      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <DetailHistory name={entry.name} events={history} running={running} />
+        <DetailPropsPanel
+          entry={view}
+          ctx={ctx}
+          usedBy={usedBy}
+          running={running}
+          onStatusChanged={setStatusOverride}
+        />
       </div>
-    </div>
-  );
-}
 
-function Meta({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1 border-b border-st-border pb-3 last:border-b-0 last:pb-0">
-      <span className="text-step-n2 text-st-muted-foreground">{label}</span>
-      <span className="text-step-n1 break-words">{children}</span>
-    </div>
-  );
-}
+      {/* 한 줄로 눌렀다 — 제목·코드·복사 버튼이 같은 줄에 서면 세로 공간을 거의 안 먹는다. */}
+      <section className="mt-8 flex flex-wrap items-center gap-3 rounded-xl border border-st-border bg-st-card px-4 py-3">
+        <h2 className="shrink-0 text-step-n1 font-medium">사용 예제</h2>
+        <code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap font-mono text-step-n2 text-st-muted-foreground">
+          {buildUsageExample(entry, ctx)}
+        </code>
+        <CopyButton text={buildUsageExample(entry, ctx)} label="복사" size="sm" />
+      </section>
 
-function PropsMeta({ entry }: { entry: Entry }) {
-  const props = entry.meta.props?.filter((p) => p.editable !== false) ?? [];
-  if (props.length === 0) return null;
-  return (
-    <Meta label="props">
-      <span className="flex flex-col gap-0.5">
-        {props.map((prop) => (
-          <code key={prop.name} className="text-step-n2">
-            {prop.name}
-            <span className="text-st-muted-foreground">
-              :{prop.type}
-              {prop.type === "enum" && prop.options?.length ? `(${prop.options.join("/")})` : ""}
-            </span>
-          </code>
-        ))}
-      </span>
-    </Meta>
-  );
-}
-
-function Timeline({ event }: { event: HistoryEvent }) {
-  return (
-    <li className="rounded-lg border border-st-border bg-st-card p-3">
-      <div className="flex flex-wrap items-center gap-2 text-step-n2">
-        <span className="font-medium">{ACTION_LABEL[event.action]}</span>
-        <span className="text-st-muted-foreground">{event.actor}</span>
-        <span className="text-st-muted-foreground">{relativeTime(event.at)}</span>
-        {event.sha ? (
-          <code className="rounded-sm bg-st-muted px-1.5 py-0.5">{event.sha.slice(0, 7)}</code>
-        ) : null}
-      </div>
-      {event.note ? <p className="mt-1.5 text-step-n1">{event.note}</p> : null}
-      {event.prompt ? (
-        <blockquote className="mt-2 border-l-2 border-st-border pl-3 text-step-n2 whitespace-pre-wrap text-st-muted-foreground">
-          {event.prompt}
-        </blockquote>
+      {related.length > 0 ? (
+        <section className="mt-6">
+          <h2 className="text-step-n1 font-medium text-st-muted-foreground">관련 컴포넌트</h2>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {related.map((item) => (
+              <Link
+                key={item.name}
+                to={`/c/${item.name}`}
+                className="press inline-flex h-8 items-center gap-1.5 rounded-full border border-st-border bg-st-card px-3 text-step-n2 hover:border-st-ring"
+              >
+                <span className="font-medium">{item.name}</span>
+                <span className="text-st-muted-foreground">{item.meta.category}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
       ) : null}
-    </li>
+    </div>
   );
 }
 
 function NotFound({ name }: { name: string }) {
   return (
-    <div className="mx-auto max-w-3xl px-6 py-20 text-center">
-      <p className="text-step-1 font-semibold">컴포넌트를 찾을 수 없습니다</p>
-      <p className="mt-2 text-step-n1 text-st-muted-foreground">
-        <code>{name}</code> 은 이 프로젝트 레지스트리에 없습니다.
-      </p>
+    <div className="mx-auto max-w-6xl px-6 py-16 text-center">
+      <p className="text-step-1 font-medium">컴포넌트를 찾을 수 없습니다.</p>
+      <CodeBlock className="mx-auto mt-4 w-fit" code={name} copyable={false} />
       <Link
         to="/"
-        className="press mt-6 inline-block rounded-md bg-st-primary px-3 py-1.5 text-step-n1 text-st-primary-foreground"
+        className="press mt-6 inline-block text-step-n1 text-st-muted-foreground hover:text-st-foreground"
       >
-        라이브러리로
+        ← 라이브러리로
       </Link>
     </div>
   );

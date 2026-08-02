@@ -18,12 +18,23 @@ import { isSameOrigin, json, readBody, type Req, type Res } from "./http.js";
 export function createAgentApi(config: ResolvedConfig): {
   handle(req: Req, res: Res, path: string): boolean;
   dispose(): void;
+  isRunning(name: string): boolean;
 } {
   const store = new AgentRunStore(config.root);
 
   return {
     dispose(): void {
       store.killAll();
+    },
+
+    /**
+     * 이 컴포넌트를 지금 고치는 중인가.
+     *
+     * 상태 변경·복원 API 가 이걸 보고 막는다 — 에이전트가 반쯤 쓴 파일 위에 다른 버전을
+     * 덮어쓰면 어느 쪽도 온전하지 않게 된다.
+     */
+    isRunning(name: string): boolean {
+      return store.runningFor(`/c/${name}`) !== null;
     },
 
     handle(req: Req, res: Res, path: string): boolean {

@@ -11,6 +11,7 @@ import { listFlows, tryReadFlow } from "../flow/store.js";
 import { resolveActorName } from "../identity/store.js";
 import { handlePageFeedback } from "./api-pages.js";
 import { createAgentApi } from "./api-agent.js";
+import { createEntryApi } from "./api-entry.js";
 import { createIdentityApi } from "./api-identity.js";
 import { json } from "./http.js";
 import { packageVersion } from "../pkg.js";
@@ -38,6 +39,12 @@ export function ieApi(config: ResolvedConfig): Plugin {
    * `/api/agent/*` 는 아래 최종 404 로 떨어진다 — "있는데 막혀 있다"가 아니라 "없다".
    */
   const agentApi = config.gallery.agent ? createAgentApi(config) : null;
+
+  /*
+   * 상태 변경·복원. 에이전트가 꺼져 있으면 "돌고 있는 것"이 없으므로 항상 통과시킨다 —
+   * agentApi 가 없을 때 false 를 돌려주는 것이 정확한 답이다.
+   */
+  const entryApi = createEntryApi(config, (name) => agentApi?.isRunning(name) ?? false);
 
   return {
     name: "instant-elements:api",
@@ -76,6 +83,12 @@ export function ieApi(config: ResolvedConfig): Plugin {
           const names = listEntryNames(dirs);
           return json(res, { count: names.length, names });
         }
+
+        /*
+         * 구체적인 것을 먼저. 아래 `/api/entry/<name>` 범용 핸들러는 그 뒤 경로 조각을 이름의
+         * 일부로 읽어 `stat-card/restore-points` 를 잘못된 이름이라고 400 을 냈다.
+         */
+        if (entryApi.handle(req, res, path)) return;
 
         if (path.startsWith("/api/entry/") && req.method === "GET") {
           const name = decodeURIComponent(path.slice("/api/entry/".length));

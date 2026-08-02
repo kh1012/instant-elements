@@ -3,6 +3,7 @@ import type { Entry } from "instant-elements/registry";
 import { cn } from "../lib/cn";
 import { ComponentCard } from "../components/ComponentCard";
 import { ComponentRow } from "../components/ComponentRow";
+import { rememberListOrder } from "./DetailRoute.header";
 import type { LibraryQuery } from "./LibraryRoute.types";
 
 /**
@@ -29,6 +30,14 @@ export function LibraryResults({
   runningNames: Set<string>;
 }) {
   const pinned = new Set(pins);
+
+  /*
+   * 지금 보이는 순서를 남긴다. 상세 화면의 ←/→ 가 이걸 읽어 **방금 보던 목록**을 따라간다 —
+   * 전체 배열 인덱스를 쓰면 "오늘 수정됨"을 보다가 화살표를 눌렀을 때 화면에 없던 것으로 튄다.
+   */
+  useEffect(() => {
+    rememberListOrder(entries.map((entry) => entry.name));
+  }, [entries]);
 
   if (query.view === "list") {
     return (

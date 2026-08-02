@@ -64,6 +64,13 @@ export interface EntryMeta {
   composedOf?: string[];
   /** 실제로 참조하는 st-* 토큰들. */
   tokens?: string[];
+  /**
+   * 상세 화면 프리뷰의 확대 배율. 기본 1(실제 크기).
+   *
+   * 뱃지·아이콘처럼 아주 작은 컴포넌트는 프레임 안에서 점처럼 보여 판단이 안 된다. 목록 카드는
+   * 썸네일이라 그대로 두고 **상세에서만** 키운다 — 카드까지 키우면 목록의 크기 감각이 서로 어긋난다.
+   */
+  previewZoom?: number;
   /** 구조화된 props 스키마. 자유 문자열이 아니다 — 페이지 조립이 이걸 읽어 실 컴포넌트를 그린다. */
   props?: PropSchema[];
   /** git user.name. */

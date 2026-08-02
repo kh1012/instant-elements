@@ -106,3 +106,33 @@ export function deleteFeedback(slug: string, id: string): Promise<{ items: Feedb
 export function clearFeedback(slug: string): Promise<{ items: FeedbackItem[] }> {
   return send(feedbackUrl(slug), "DELETE");
 }
+
+// ── 컴포넌트 고치기 (상태·복원)
+//
+// 둘 다 실행 중이면 서버가 409 로 막는다. 화면에서도 비활성으로 보여 주지만, 버튼을 누른 뒤
+// 실행이 시작되는 경합이 있어 서버 쪽 확인이 진짜 방어선이다.
+
+export interface RestorePoint {
+  sha: string;
+  at: string;
+  actor: string;
+  note?: string;
+}
+
+export function fetchRestorePoints(name: string): Promise<{ points: RestorePoint[] }> {
+  return get(`/api/entry/${encodeURIComponent(name)}/restore-points`);
+}
+
+export function setEntryStatus(
+  name: string,
+  status: "draft" | "stable" | "deprecated",
+): Promise<{ name: string; status: string; changed: boolean }> {
+  return send(`/api/entry/${encodeURIComponent(name)}/status`, "POST", { status });
+}
+
+export function restoreEntry(
+  name: string,
+  sha: string,
+): Promise<{ name: string; sha: string; files: string[]; commit: string }> {
+  return send(`/api/entry/${encodeURIComponent(name)}/restore`, "POST", { sha });
+}
