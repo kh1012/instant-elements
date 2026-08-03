@@ -145,7 +145,7 @@ npx instant-elements gallery status
 ```
 
 - `✓` 면 링크를 전달하고 **실제 브라우저로 열어** 렌더를 확인한다(빈 화면·깨진 노드·엉뚱한 컴포넌트).
-- `✗ 다른 갤러리가 쓰고 있습니다` → 그 포트의 응답을 근거로 삼지 않는다. `ie gallery --port <다른포트>`.
+- `✗ 다른 갤러리가 쓰고 있습니다` → 그 포트의 응답을 근거로 삼지 않는다. `npx instant-elements gallery --port <다른포트>`.
 - `! 실행 중이 아닙니다` → `npx instant-elements gallery` 를 안내하고, 링크는 **"미검증"** 이라고 명시한다.
 
 ```
@@ -160,7 +160,7 @@ http://127.0.0.1:<port>/pages/<slug>
 ## 7. 가드레일
 
 - 페이지 파일 **외 수정 금지**. 레지스트리·컴포넌트 코드는 읽기만.
-- 모든 노드 `props.id` 유일. 컨테이너 자식은 반드시 `props.items`. — `ie page set` 이 강제한다.
+- 모든 노드 `props.id` 유일. 컨테이너 자식은 반드시 `props.items`. — `npx instant-elements page set` 이 강제한다.
 - 색·간격은 프리미티브와 컴포넌트가 `st-*` 토큰으로 처리한다 — 페이지 데이터에 임의 hex·px 를
   넣지 않는다.
 - **큰 삭제는 사람에게 확인**한다. 일상적인 조립·개선·저장은 자동으로 진행한다.

@@ -24,5 +24,5 @@ description: >
 > - GUIDE 를 못 읽으면 임의로 진행하지 말고 사용자에게 알리고 멈춘다.
 
 한 줄 요약(정본 대체 아님): 컴포넌트는 만들지 않는다(없으면 `/element-create` 로 위임).
-`ie page get` → 편집 → `ie page set --base <읽은 version>` 으로 저장한다. 통째로 덮어쓰지 않는다.
+`npx instant-elements page get` → 편집 → `npx instant-elements page set --base <읽은 version>` 으로 저장한다. 통째로 덮어쓰지 않는다.
 — **자세한 절차는 `npx instant-elements guide page-create`.**

@@ -27,6 +27,25 @@ describe("배포되는 스킬", () => {
     }
   });
 
+  /*
+   * `ie` 는 실행 파일 이름이고 `instant-elements` 는 패키지 이름이다. npx 는 패키지를 받아오므로
+   * `npx ie` 는 npm 에 따로 존재하는 남의 `ie` 패키지를 내려받는다. 맨 `ie` 도 전역 설치가 없는
+   * 환경에서는 그냥 실패한다 — 에이전트가 읽고 그대로 실행하는 문서에는 둘 다 두지 않는다.
+   *
+   * 한 번 일괄 치환했는데 일부가 빠져 두 표기가 섞인 채 배포된 적이 있다. 그때 이 테스트가
+   * 없어서 릴리스까지 갔다.
+   */
+  it("실행 명령을 패키지 이름으로 부른다 — `npx ie` 는 남의 패키지를 받는다", () => {
+    const bare = /`(?:npx\s+)?ie\s+(element|page|flow|gallery|config|index|add|guide)\b/;
+    for (const name of SKILL_NAMES) {
+      for (const file of ["SKILL.md", "GUIDE.md"]) {
+        const text = readFileSync(join(shippedSkillDir(name), file), "utf8");
+        const hit = text.split("\n").find((line) => bare.test(line));
+        expect(hit, `${name}/${file}`).toBeUndefined();
+      }
+    }
+  });
+
   it("스텁 프론트매터의 name 이 디렉토리 이름과 같다 — 어긋나면 에이전트가 못 찾는다", () => {
     for (const name of SKILL_NAMES) {
       const stub = readFileSync(join(shippedSkillDir(name), "SKILL.md"), "utf8");
@@ -37,7 +56,7 @@ describe("배포되는 스킬", () => {
   it("스텁이 절차를 복사해 두지 않고 정본으로 라우팅한다 — 복사본은 반드시 낡는다", () => {
     for (const name of SKILL_NAMES) {
       const stub = readFileSync(join(shippedSkillDir(name), "SKILL.md"), "utf8");
-      expect(stub).toContain(`ie guide ${name}`);
+      expect(stub).toContain(`npx instant-elements guide ${name}`);
       // 스텁이 길어지면 그 자체가 두 번째 정본이 된다.
       expect(stub.split("\n").length).toBeLessThan(45);
     }
@@ -45,13 +64,13 @@ describe("배포되는 스킬", () => {
 
   it("정본이 경로를 하드코딩하지 않고 설정에서 읽으라고 지시한다", () => {
     const guide = readFileSync(join(shippedSkillDir("element-create"), "GUIDE.md"), "utf8");
-    expect(guide).toContain("ie config --json");
+    expect(guide).toContain("npx instant-elements config --json");
     expect(guide).toContain("경로를 하드코딩하지 않는다");
   });
 
   it("정본이 딥링크 검증을 단일 명령으로 시킨다 — 손으로 curl 하면 위양성을 못 피한다", () => {
     const guide = readFileSync(join(shippedSkillDir("element-create"), "GUIDE.md"), "utf8");
-    expect(guide).toContain("ie gallery status");
+    expect(guide).toContain("npx instant-elements gallery status");
     expect(guide).toContain("미검증");
     // 같은 포트를 다른 프로젝트 갤러리가 점유하면 흔한 이름(button·card)에 200 이 온다.
     // 그 함정을 명시하지 않으면 에이전트가 다시 손으로 curl 한다.
@@ -60,13 +79,13 @@ describe("배포되는 스킬", () => {
 
   it("page-create 정본도 갤러리 신원 확인을 먼저 시킨다", () => {
     const guide = readFileSync(join(shippedSkillDir("page-create"), "GUIDE.md"), "utf8");
-    expect(guide).toContain("ie gallery status");
+    expect(guide).toContain("npx instant-elements gallery status");
     expect(guide).toContain("미검증");
   });
 
   it("page-create 정본이 저장 전 구조 검증을 알린다", () => {
     const guide = readFileSync(join(shippedSkillDir("page-create"), "GUIDE.md"), "utf8");
-    expect(guide).toContain("ie page check");
+    expect(guide).toContain("npx instant-elements page check");
     expect(guide).toContain("종료코드 65");
   });
 

@@ -1,6 +1,7 @@
 import type { Entry } from "instant-elements/registry";
 import type { PageNode } from "instant-elements/page";
 import type { FeedbackItem, PageDetail } from "./api";
+import { CLI } from "./cli-name";
 
 /** 구조 덤프 상한 — 프롬프트가 페이지 전문(수천 줄)이 되지 않게 자른다. 형태 파악이 목적이다. */
 const STRUCTURE_LINE_LIMIT = 60;
@@ -30,7 +31,7 @@ function findNodePath(
 function renderStructure(nodes: PageNode[], depth = 0, out: string[] = []): string[] {
   for (const node of nodes) {
     if (out.length >= STRUCTURE_LINE_LIMIT) {
-      out.push(`${"  ".repeat(depth)}… (이하 생략 — 전체는 \`ie page get\` 으로)`);
+      out.push(`${"  ".repeat(depth)}… (이하 생략 — 전체는 \`${CLI} page get\` 으로)`);
       return out;
     }
     const bits = [node.type];
@@ -77,7 +78,7 @@ export function buildFeedbackPrompt(
     "아래 피드백을 반영해 이 페이지를 개선해줘. `page-create` 스킬 절차를 따른다:",
     "",
     "```bash",
-    "npx instant-elements guide page-create",
+    `${CLI} guide page-create`,
     "```",
     "",
     "## 대상 페이지",
@@ -88,8 +89,8 @@ export function buildFeedbackPrompt(
     "",
     "## 저장 방법 (동시성 안전 — 통째로 덮어쓰기 금지)",
     "```bash",
-    `npx instant-elements page get ${page.slug} > /tmp/page.json     # 여기 version 을 --base 에 넣는다`,
-    `npx instant-elements page set ${page.slug} <편집한.json> \\`,
+    `${CLI} page get ${page.slug} > /tmp/page.json     # 여기 version 을 --base 에 넣는다`,
+    `${CLI} page set ${page.slug} <편집한.json> \\`,
     `  --base <위 version> --action refined --note "리뷰 피드백 반영"`,
     "```",
     "",

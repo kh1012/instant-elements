@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Entry } from "instant-elements/registry";
+import { CLI } from "./cli-name";
 import {
   buildCreatePrompt,
   buildIntegrationPrompt,
@@ -126,7 +127,7 @@ describe("수정 프롬프트", () => {
 
   it("기록 절차를 함께 싣는다 — 고쳤는데 이력이 없는 상태를 만들지 않게", () => {
     const prompt = buildModifyPrompt(entry(), ctx);
-    expect(prompt).toContain("ie element log stat-card --action modified");
+    expect(prompt).toContain("npx instant-elements element log stat-card --action modified");
     expect(prompt).toContain("--sha");
     expect(prompt).toContain("git rev-parse HEAD");
   });
@@ -139,7 +140,7 @@ describe("수정 프롬프트", () => {
 describe("분할 프롬프트", () => {
   it("수정과 다른 결과물을 요구한다 — 조각을 만들고 원본을 조립체로 바꾼다", () => {
     const prompt = buildSplitPrompt(entry(), ctx);
-    expect(prompt).toContain("ie element new");
+    expect(prompt).toContain("npx instant-elements element new");
     expect(prompt).toContain("composedOf");
     expect(prompt).toContain("Composite");
   });
@@ -161,7 +162,7 @@ describe("분할 프롬프트", () => {
   });
 
   it("기록 절차를 함께 싣는다", () => {
-    expect(buildSplitPrompt(entry(), ctx)).toContain("ie element log stat-card --action modified");
+    expect(buildSplitPrompt(entry(), ctx)).toContain("npx instant-elements element log stat-card --action modified");
   });
 
   it("조각의 카테고리를 원본과 별개로 판단하라고 안내한다", () => {
@@ -196,14 +197,14 @@ describe("buildCreatePrompt", () => {
   it("만들기 전에 먼저 찾으라고 시킨다", () => {
     // 비슷한 게 둘이면 둘 다 안 쓰이게 된다 — 중복 생성이 이 화면의 가장 큰 위험이다.
     const prompt = buildCreatePrompt("칩", ctx);
-    expect(prompt).toContain("ie element list");
+    expect(prompt).toContain("npx instant-elements element list");
     expect(prompt).toContain("먼저 찾는다");
   });
 
   it("손으로 파일을 만들지 말고 스캐폴드를 거치게 한다", () => {
     // 엔트리·히스토리·index 가 빠지면 갤러리에 나타나지 않는다.
     const prompt = buildCreatePrompt("칩", ctx);
-    expect(prompt).toContain("ie element new <name>");
+    expect(prompt).toContain("npx instant-elements element new <name>");
     expect(prompt).toContain("손으로 파일을 만들지 말 것");
   });
 
@@ -217,5 +218,32 @@ describe("buildCreatePrompt", () => {
     expect(buildCreatePrompt("칩", ctx)).toContain(
       "색은 `st-*` 토큰만, 크기·여백·라운드는 스케일만 — 임의 hex·px 금지.",
     );
+  });
+});
+
+/*
+ * 위 단언들이 `npx instant-elements` 를 **글자 그대로** 적는 이유가 여기 있다.
+ *
+ * `CLI` 상수를 import 해서 비교하면 상수를 `npx ie` 로 되돌려도 전부 통과한다 —
+ * 이 테스트가 막으려는 사고를 정확히 못 잡는 셈이다.
+ */
+describe("CLI 호출 접두사", () => {
+  it("npx 뒤에는 패키지 이름이 온다 — 실행 파일 이름(ie)은 npm 에 있는 남의 패키지다", () => {
+    expect(CLI).toBe("npx instant-elements");
+  });
+
+  it("모든 프롬프트가 그 접두사만 쓴다", () => {
+    const entryValue = entry();
+    const prompts = [
+      buildIntegrationPrompt(entryValue, ctx),
+      buildModifyPrompt(entryValue, ctx),
+      buildSplitPrompt(entryValue, ctx),
+      buildCreatePrompt("칩", ctx),
+    ];
+    for (const prompt of prompts) {
+      // `npx ie …` 또는 줄 첫머리의 맨 `ie …` — 둘 다 실행되면 엉뚱한 패키지를 받는다.
+      expect(prompt).not.toMatch(/npx\s+ie\s/);
+      expect(prompt).not.toMatch(/(^|[`\n])\s*ie\s+(element|page|flow|gallery|index|add|config)\b/);
+    }
   });
 });

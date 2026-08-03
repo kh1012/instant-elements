@@ -123,7 +123,7 @@ npx instant-elements element validate <name>   # 하드룰 검증 — 차단이 
    `text-step-{n2,n1,0,1,2,3}`, 간격은 Tailwind 기본 스케일. `w-[13px]` 류 임의값 금지.
 3. **필요한 토큰이 없으면 코드에 값을 박지 말고 사용자에게 알린다.** 팔레트를 늘리는 건 디자인
    결정이지 구현 결정이 아니다.
-4. **엔트리와 코드는 항상 쌍이다.** `ie element new` 를 거치지 않고 파일만 만들지 않는다.
+4. **엔트리와 코드는 항상 쌍이다.** `npx instant-elements element new` 를 거치지 않고 파일만 만들지 않는다.
 5. **`summary` 없이 완료하지 않는다.**
 6. **데모 없이 완료하지 않는다.** 데모가 없으면 갤러리 카드가 비고, 페이지 조립에서도 쓸 수 없다.
 
@@ -148,8 +148,8 @@ npx instant-elements gallery status <name>
 | 출력 | 뜻 | 어떻게 말할 것인가 |
 | --- | --- | --- |
 | `✓ 확인됨 — …/c/<name>` | 내 프로젝트의 갤러리가 이 엔트리를 본다 | 딥링크를 **"확인됨"** 으로 전달 |
-| `! … 이 없습니다` | 갤러리는 맞는데 엔트리가 없다 | `ie index` 를 실행했는지·이름이 맞는지 확인 |
-| `✗ 다른 갤러리가 쓰고 있습니다` | 그 포트는 **남의 프로젝트**다 | 이 포트의 응답을 근거로 삼지 않는다. `ie gallery --port <다른포트>` 안내 |
+| `! … 이 없습니다` | 갤러리는 맞는데 엔트리가 없다 | `npx instant-elements index` 를 실행했는지·이름이 맞는지 확인 |
+| `✗ 다른 갤러리가 쓰고 있습니다` | 그 포트는 **남의 프로젝트**다 | 이 포트의 응답을 근거로 삼지 않는다. `npx instant-elements gallery --port <다른포트>` 안내 |
 | `! 실행 중이 아닙니다` | 갤러리 미실행 | 링크는 주되 반드시 **"미검증"** 이라고 명시 |
 
 **어떤 경우에도 "확인됨"처럼 말하려면 위 명령이 `✓` 를 낸 뒤여야 한다.**
@@ -199,7 +199,7 @@ npx instant-elements gallery status <name>
 
 ## 8. 입출력 요약
 
-- **읽기**: `ie config --json` · `ie element list/get --json`
-- **쓰기(신규)**: `ie element new` 가 만든 3파일을 실제 구현으로 채우고, 엔트리 `meta.props` 보강
-- **쓰기(수정)**: 엔트리가 가리키는 실제 코드 위치 + `ie element log`
-- **실행**: `ie index` (엔트리를 손으로 고쳤으면 반드시)
+- **읽기**: `npx instant-elements config --json` · `npx instant-elements element list/get --json`
+- **쓰기(신규)**: `npx instant-elements element new` 가 만든 3파일을 실제 구현으로 채우고, 엔트리 `meta.props` 보강
+- **쓰기(수정)**: 엔트리가 가리키는 실제 코드 위치 + `npx instant-elements element log`
+- **실행**: `npx instant-elements index` (엔트리를 손으로 고쳤으면 반드시)
