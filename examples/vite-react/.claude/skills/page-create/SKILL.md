@@ -16,7 +16,7 @@ description: >
 > 이 스킬이 발동하면 **작업을 시작하기 전에 반드시** 정본을 새로 열어 그대로 따른다:
 >
 > ```bash
-> npx ie guide page-create
+> npx instant-elements guide page-create
 > ```
 >
 > - 정본은 설치된 패키지 안에 있어 **`npm update instant-elements` 만으로 최신 지침을 받는다**.
@@ -25,4 +25,4 @@ description: >
 
 한 줄 요약(정본 대체 아님): 컴포넌트는 만들지 않는다(없으면 `/element-create` 로 위임).
 `ie page get` → 편집 → `ie page set --base <읽은 version>` 으로 저장한다. 통째로 덮어쓰지 않는다.
-— **자세한 절차는 `npx ie guide page-create`.**
+— **자세한 절차는 `npx instant-elements guide page-create`.**

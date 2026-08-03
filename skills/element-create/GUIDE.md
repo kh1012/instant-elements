@@ -1,6 +1,6 @@
 # element-create — 정본 절차 (GUIDE)
 
-> **이 파일이 정본이다.** 설치된 스텁이 발동 시 `npx ie guide element-create` 로 매번 이 내용을
+> **이 파일이 정본이다.** 설치된 스텁이 발동 시 `npx instant-elements guide element-create` 로 매번 이 내용을
 > 새로 연다. 패키지를 업데이트하면 지침도 함께 갱신된다.
 >
 > 팀은 컴포넌트 디렉토리를 직접 뒤지지 않는다. UI 가 필요하면 **역할을 설명**하고, 이 스킬이
@@ -13,13 +13,13 @@
 프로젝트마다 컴포넌트·레지스트리 위치가 다르다. **항상 먼저 해석된 설정을 읽는다:**
 
 ```bash
-npx ie config --json
+npx instant-elements config --json
 ```
 
 `elementsDir` · `entriesDir` · `importAlias` · `gallery.port` 가 여기서 나온다. 이 문서의 어떤
 경로 예시도 그대로 믿지 말고 이 출력을 따른다.
 
-설정이 없다면(`configFile: null`) 기본값으로 동작하지만, 먼저 `npx ie init` 을 제안한다.
+설정이 없다면(`configFile: null`) 기본값으로 동작하지만, 먼저 `npx instant-elements init` 을 제안한다.
 
 ---
 
@@ -47,11 +47,11 @@ npx ie config --json
 ## 2. 재사용을 먼저 찾는다
 
 ```bash
-npx ie element list --json
-npx ie element list --query "<역할 키워드>" --json
+npx instant-elements element list --json
+npx instant-elements element list --query "<역할 키워드>" --json
 ```
 
-- 역할·키워드로 후보 2~3개를 고르고, 필요하면 `npx ie element get <name> --json` 으로
+- 역할·키워드로 후보 2~3개를 고르고, 필요하면 `npx instant-elements element get <name> --json` 으로
   props·intent 를 자세히 본다.
 - **`Composite` 와 `Animations` 를 우선 본다.** `System` 은 기반 요소라 역할이 겹치는 경우가 드물다.
 - `Animations` 를 볼 때는 **독립 위젯**(자체 모달·포털·수명주기를 소유)과 **이식 가능한 동작**
@@ -67,7 +67,7 @@ npx ie element list --query "<역할 키워드>" --json
 - **추천했으면 반드시 기록한다:**
 
   ```bash
-  npx ie element log <추천한이름> --action recommended --prompt "<요청 원문>"
+  npx instant-elements element log <추천한이름> --action recommended --prompt "<요청 원문>"
   ```
 
   코드를 안 고쳤어도 이것만은 남긴다 — 없으면 이 하네스의 존재 이유인 **재사용률**을 영영 잴 수 없다.
@@ -77,7 +77,7 @@ npx ie element list --query "<역할 키워드>" --json
 ## 4. 매칭 실패일 때만 새로 만든다
 
 ```bash
-npx ie element new <name> \
+npx instant-elements element new <name> \
   --intent "<요청 원문 그대로>" \
   --summary "<§1 규칙대로 지은 한 문장>" \
   --category Composite \
@@ -108,9 +108,9 @@ npx ie element new <name> \
 마지막으로 인덱스를 갱신하고 **검증 게이트를 통과시킨다**:
 
 ```bash
-npx ie index
-npx ie element schema <name>     # TS Props → meta.props 백필
-npx ie element validate <name>   # 하드룰 검증 — 차단이 있으면 완료 처리하지 않는다
+npx instant-elements index
+npx instant-elements element schema <name>     # TS Props → meta.props 백필
+npx instant-elements element validate <name>   # 하드룰 검증 — 차단이 있으면 완료 처리하지 않는다
 ```
 
 ---
@@ -118,7 +118,7 @@ npx ie element validate <name>   # 하드룰 검증 — 차단이 있으면 완�
 ## 5. 하드 룰 (위반 시 완료 처리하지 않는다)
 
 1. **색은 `st-*` 토큰만.** 임의 hex/rgb/hsl/oklch 리터럴 금지.
-   쓸 수 있는 토큰 목록은 `npx ie config --json` 의 `tokens.css` 파일에서 확인한다.
+   쓸 수 있는 토큰 목록은 `npx instant-elements config --json` 의 `tokens.css` 파일에서 확인한다.
 2. **크기·여백·라운드는 스케일만.** radius 는 `rounded-{xs,sm,md,lg,xl,full}`, 폰트는
    `text-step-{n2,n1,0,1,2,3}`, 간격은 Tailwind 기본 스케일. `w-[13px]` 류 임의값 금지.
 3. **필요한 토큰이 없으면 코드에 값을 박지 말고 사용자에게 알린다.** 팔레트를 늘리는 건 디자인
@@ -142,7 +142,7 @@ npx ie element validate <name>   # 하드룰 검증 — 차단이 있으면 완�
 > 엔트리를 그다음에 보므로 이 함정이 구조적으로 막힌다.
 
 ```bash
-npx ie gallery status <name>
+npx instant-elements gallery status <name>
 ```
 
 | 출력 | 뜻 | 어떻게 말할 것인가 |
@@ -176,7 +176,7 @@ npx ie gallery status <name>
 1. **코드가 어디 있는지 엔트리에서 확인한다** — 경로를 가정하지 않는다.
 
    ```bash
-   npx ie element get <name> --json    # entry.files[0].path
+   npx instant-elements element get <name> --json    # entry.files[0].path
    ```
 
 2. 그 디렉토리 **안에서만** 고친다. 데모(`*.demo.tsx`)도 함께 맞춘다 — 갤러리 카드가 그 파일을 그린다.
@@ -186,7 +186,7 @@ npx ie gallery status <name>
 5. **이력을 남긴다:**
 
    ```bash
-   npx ie element log <name> --action modified \
+   npx instant-elements element log <name> --action modified \
      --note "<무엇을 바꿨는지 한 줄>" \
      --prompt "<요청 원문 그대로>" \
      --sha "$(git rev-parse HEAD)"

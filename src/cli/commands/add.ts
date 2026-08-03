@@ -29,7 +29,13 @@ export const addCommand = defineCommand({
     if (!url) {
       throw new CliError("번들 주소가 필요합니다.", {
         exitCode: 64,
-        hint: "ie add https://raw.githubusercontent.com/<owner>/<repo>/main/components/<owner>/<name>.json",
+        /*
+         * 마켓플레이스 상세 페이지가 주는 **배달 주소**를 예시로 든다.
+         *
+         * 예전엔 raw.githubusercontent 주소를 적었는데, 데이터 레포가 private 이 되면서
+         * 그 주소는 404 다. 안내가 죽은 주소를 가리키면 시키는 대로 한 사람이 막힌다.
+         */
+        hint: "ie add https://instant-elements-marketplace.vercel.app/api/component/<owner>/<name>",
       });
     }
     let parsed: URL;

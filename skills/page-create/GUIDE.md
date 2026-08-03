@@ -1,6 +1,6 @@
 # page-create — 정본 절차 (GUIDE)
 
-> **이 파일이 정본이다.** 설치된 스텁이 발동 시 `npx ie guide page-create` 로 매번 이 내용을 새로 연다.
+> **이 파일이 정본이다.** 설치된 스텁이 발동 시 `npx instant-elements guide page-create` 로 매번 이 내용을 새로 연다.
 >
 > 페이지 갤러리는 **"설명만으로 초안을 조립하고 다듬어 완성한다"** 가 기본 경로인 도구다.
 > 개발자는 Figma 나 드래그 편집기에 능숙할 필요가 없다 — 원하는 화면을 말로 설명하면 된다.
@@ -12,7 +12,7 @@
 - **컴포넌트를 새로 만들지 않는다.** 필요한 UI 가 레지스트리에 없으면 그 자리에 `Placeholder` 를
   두고 초안을 끝낸 뒤, 사용자에게 `/element-create` 로 만들어야 한다고 알린다.
 - **다루는 파일은 페이지 하나뿐이다.** 레지스트리·컴포넌트 코드·설정은 읽기만 한다.
-- 경로는 하드코딩하지 않는다 — `npx ie config --json` 의 `pagesDir` 를 본다.
+- 경로는 하드코딩하지 않는다 — `npx instant-elements config --json` 의 `pagesDir` 를 본다.
 
 ---
 
@@ -78,14 +78,14 @@
 ## 2. 도구
 
 ```bash
-npx ie page list                    # 페이지 목록
-npx ie page get <slug>              # {version, title, data} — version 을 기억한다
-npx ie page history <slug>          # 편집 이력
-npx ie page catalog                 # 조립 가능한 컴포넌트 + **props 스키마**(데모 보유 = 렌더 가능)
-npx ie page catalog --all           # 전체(렌더 불가 포함 — 노드로 쓰지 말 것)
-npx ie page create "<제목>"          # 빈 페이지 → {slug, version}
-npx ie page set <slug> <file.json> --base <version> --action refined --note "<한 일>"
-npx ie page versions <slug>         # 스냅샷 목록
+npx instant-elements page list                    # 페이지 목록
+npx instant-elements page get <slug>              # {version, title, data} — version 을 기억한다
+npx instant-elements page history <slug>          # 편집 이력
+npx instant-elements page catalog                 # 조립 가능한 컴포넌트 + **props 스키마**(데모 보유 = 렌더 가능)
+npx instant-elements page catalog --all           # 전체(렌더 불가 포함 — 노드로 쓰지 말 것)
+npx instant-elements page create "<제목>"          # 빈 페이지 → {slug, version}
+npx instant-elements page set <slug> <file.json> --base <version> --action refined --note "<한 일>"
+npx instant-elements page versions <slug>         # 스냅샷 목록
 ```
 
 `set` 입력 파일 형식: `{ "title"?: string, "data": <PageData> }`
@@ -108,7 +108,7 @@ npx ie page versions <slug>         # 스냅샷 목록
      이 셋은 저장은 되면서 화면만 조용히 비는 종류라, 통과시키면 사람이 나중에 발견하게 된다.
    - **종료코드 4(충돌)**: 그 사이 사람이나 다른 에이전트가 저장했다. `get` 으로 최신본을 다시 받아
      **내 변경을 재적용**한 뒤 다시 시도한다. **덮어쓰지 않는다.**
-   - 이미 저장된 페이지를 점검하려면 `npx ie page check <slug>`.
+   - 이미 저장된 페이지를 점검하려면 `npx instant-elements page check <slug>`.
 5. §6 딥링크를 출력하고 브라우저로 검수한다.
 
 ---
@@ -141,18 +141,18 @@ npx ie page versions <slug>         # 스냅샷 목록
 점유하고 있을 수 있고, 그때 오는 응답은 내 프로젝트와 아무 상관이 없다:
 
 ```bash
-npx ie gallery status
+npx instant-elements gallery status
 ```
 
 - `✓` 면 링크를 전달하고 **실제 브라우저로 열어** 렌더를 확인한다(빈 화면·깨진 노드·엉뚱한 컴포넌트).
 - `✗ 다른 갤러리가 쓰고 있습니다` → 그 포트의 응답을 근거로 삼지 않는다. `ie gallery --port <다른포트>`.
-- `! 실행 중이 아닙니다` → `npx ie gallery` 를 안내하고, 링크는 **"미검증"** 이라고 명시한다.
+- `! 실행 중이 아닙니다` → `npx instant-elements gallery` 를 안내하고, 링크는 **"미검증"** 이라고 명시한다.
 
 ```
 http://127.0.0.1:<port>/pages/<slug>
 ```
 
-포트는 `npx ie config --json` 의 `gallery.port`. 미리보기 우상단 **라이브** 모드로 봐야 레지스트리
+포트는 `npx instant-elements config --json` 의 `gallery.port`. 미리보기 우상단 **라이브** 모드로 봐야 레지스트리
 컴포넌트가 실제 모습으로 그려진다(최소·요약은 구조만).
 
 **스킬은 갤러리를 백그라운드로 띄우지 않는다.**

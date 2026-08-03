@@ -16,7 +16,7 @@ description: >
 > 이 스킬이 발동하면 **작업을 시작하기 전에 반드시** 정본을 새로 열어 그대로 따른다:
 >
 > ```bash
-> npx ie guide element-create
+> npx instant-elements guide element-create
 > ```
 >
 > - 정본은 설치된 패키지 안에 있어 **`npm update instant-elements` 만으로 최신 지침을 받는다**
@@ -26,4 +26,4 @@ description: >
 > - GUIDE 를 못 읽으면 임의로 진행하지 말고 사용자에게 알리고 멈춘다.
 
 한 줄 요약(정본 대체 아님): 재사용을 먼저 찾고, 없을 때만 만든다. 색은 `st-*` 토큰만, 크기·여백은
-스케일만. 고쳤으면 반드시 기록한다. — **자세한 절차는 `npx ie guide element-create`.**
+스케일만. 고쳤으면 반드시 기록한다. — **자세한 절차는 `npx instant-elements guide element-create`.**

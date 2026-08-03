@@ -34,8 +34,8 @@ instant-elements makes reuse the path of least resistance — the agent searches
 ```bash
 npm install -D instant-elements
 
-npx ie init            # config, directories, cn helper
-npx ie skills install  # skills into .claude/skills and .agents/skills
+npx instant-elements init            # config, directories, cn helper
+npx instant-elements skills install  # skills into .claude/skills and .agents/skills
 ```
 
 Wire the tokens into your Tailwind entry CSS:
@@ -59,7 +59,7 @@ Now describe what you need to your agent:
 And look at the result:
 
 ```bash
-npx ie gallery         # http://127.0.0.1:9221
+npx instant-elements gallery         # http://127.0.0.1:9221
 ```
 
 There is a working consumer project in [`examples/vite-react`](./examples/vite-react).

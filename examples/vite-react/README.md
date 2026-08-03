@@ -4,9 +4,9 @@ A minimal consumer project showing the full loop.
 
 ```bash
 npm install
-npx ie doctor            # check the environment
-npx ie skills install    # install skills into .claude/skills and .agents/skills
-npx ie gallery           # http://127.0.0.1:9221
+npx instant-elements doctor            # check the environment
+npx instant-elements skills install    # install skills into .claude/skills and .agents/skills
+npx instant-elements gallery           # http://127.0.0.1:9221
 npm run dev              # the app itself
 ```
 
