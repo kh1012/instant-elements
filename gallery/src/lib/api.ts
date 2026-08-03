@@ -64,6 +64,15 @@ export function fetchPage(slug: string): Promise<PageDetail> {
   return get(`/api/pages/${encodeURIComponent(slug)}`);
 }
 
+/**
+ * 서버가 실패를 설명하는 방식은 하나다 — `{ error: "사람이 읽는 문장" }`.
+ *
+ * 그걸 꺼내지 않으면 화면에 `HTTP 400 {"error":"title 이 비어 있습니다."}` 가 그대로 뜬다.
+ * 사람에게 보여 줄 문장을 서버가 이미 썼는데 JSON 껍데기를 씌워 버리는 셈이다.
+ *
+ * 꺼낼 것이 없을 때만 상태 코드로 떨어진다(프록시가 가로챈 응답 등 — 그때는 경로와 코드가
+ * 유일한 단서다).
+ */
 async function send<T>(path: string, method: string, body?: unknown): Promise<T> {
   const response = await fetch(path, {
     method,
@@ -71,8 +80,9 @@ async function send<T>(path: string, method: string, body?: unknown): Promise<T>
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
   if (!response.ok) {
-    const detail = await response.text().catch(() => "");
-    throw new Error(`${path} → HTTP ${response.status} ${detail}`);
+    const detail = (await response.json().catch(() => null)) as { error?: unknown } | null;
+    const message = typeof detail?.error === "string" ? detail.error : null;
+    throw new Error(message ?? `${path} → HTTP ${response.status}`);
   }
   return (await response.json()) as T;
 }
@@ -168,7 +178,49 @@ export function restorePageVersion(
   return send(`/api/pages/${encodeURIComponent(slug)}/restore`, "POST", { version });
 }
 
-// ── 흐름 설정 (시작 화면·프레임)
+// ── 만들기
+//
+// 서버는 `ie page create` / `ie flow create` 와 **같은 함수**를 부른다. 슬러그는 제목에서
+// 만들어지고 충돌하면 뒤에 숫자가 붙으므로, 돌려받은 slug 로 이동해야 한다 — 보낸 제목으로
+// 주소를 짐작하면 "대시보드"를 두 번 만들 때 첫 번째 것으로 간다.
+
+export function createPage(title: string): Promise<{ slug: string; version: string; title: string }> {
+  return send("/api/pages", "POST", { title });
+}
+
+export function createFlow(name: string): Promise<{ slug: string; name: string }> {
+  return send("/api/flows", "POST", { name });
+}
+
+// ── 흐름 목록·설정
+
+export interface FlowSummary {
+  slug: string;
+  name: string;
+  screens: number;
+  edges: number;
+  updatedAt: string;
+}
+
+export function fetchFlows(): Promise<{ flows: FlowSummary[] }> {
+  return get("/api/flows");
+}
+
+/**
+ * 페이지를 화면으로 편입한다. `remove: true` 면 뺀다.
+ *
+ * 편입 시점의 페이지 버전이 박제되므로, 같은 페이지를 다시 편입하면 **최신본으로 다시 박제**된다.
+ */
+export function setFlowScreen(
+  flowSlug: string,
+  pageSlug: string,
+  options?: { remove?: boolean },
+): Promise<{ slug: string; screens: { slug: string; version: string }[] }> {
+  return send(`/api/flows/${encodeURIComponent(flowSlug)}/screen`, "POST", {
+    slug: pageSlug,
+    ...(options?.remove ? { remove: true } : {}),
+  });
+}
 
 export function setFlowSettings(
   slug: string,

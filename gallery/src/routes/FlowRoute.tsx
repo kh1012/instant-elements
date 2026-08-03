@@ -9,6 +9,7 @@ import { useAsync } from "../lib/useAsync";
 import { PageFrame } from "../page/PageFrame";
 import { renderNodes } from "../page/PageRender";
 import { Link } from "../router";
+import { FlowEmptyScreens } from "./FlowRoute.screens";
 
 interface FlowEdge {
   id: string;
@@ -230,6 +231,12 @@ export function FlowRoute({ slug }: { slug: string }) {
             />
           ) : null}
         </div>
+      ) : detail.screens.length === 0 ? (
+        /*
+         * "화면이 0개"와 "화면을 못 읽었다"를 한 분기가 같이 받고 있었다. 앞엣것은 정상이고
+         * 뒤엣것만 오류인데, 갤러리에서 흐름을 만들 수 있게 된 뒤로는 앞엣것이 훨씬 흔하다.
+         */
+        <FlowEmptyScreens slug={slug} onAdded={state.reload} />
       ) : !screen?.data ? (
         <Centered>이 화면의 내용을 불러오지 못했습니다.</Centered>
       ) : (

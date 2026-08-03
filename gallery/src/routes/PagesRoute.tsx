@@ -1,19 +1,36 @@
-import { fetchPages } from "../lib/api";
+import { useState } from "react";
+import { createPage, fetchPages } from "../lib/api";
 import { relativeTime } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
-import { Link } from "../router";
+import { Link, navigate } from "../router";
 import { PageThumb } from "../page/PageThumb";
+import { Button } from "../components/Button";
 import { CardSkeleton } from "../components/CardSkeleton";
+import { CreateDialog } from "../components/CreateDialog";
 
 export function PagesRoute() {
   const state = useAsync(fetchPages, []);
+  const [creating, setCreating] = useState(false);
+
+  const create = async (title: string): Promise<void> => {
+    const { slug } = await createPage(title);
+    // 서버가 정한 slug 로 간다 — 제목이 겹치면 뒤에 숫자가 붙으므로 짐작하면 남의 페이지로 간다.
+    navigate(`/pages/${encodeURIComponent(slug)}`);
+  };
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-10">
-      <h1 className="text-step-2 font-semibold">페이지</h1>
-      <p className="mt-2 text-step-n1 text-st-muted-foreground">
-        쌓인 컴포넌트로 조립한 화면입니다. 열어서 보고, 고칠 자리를 짚어 두면 에이전트가 반영합니다.
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-step-2 font-semibold">페이지</h1>
+          <p className="mt-2 text-step-n1 text-st-muted-foreground">
+            쌓인 컴포넌트로 조립한 화면입니다. 열어서 보고, 고칠 자리를 짚어 두면 에이전트가 반영합니다.
+          </p>
+        </div>
+        <Button variant="primary" onClick={() => setCreating(true)}>
+          새 페이지
+        </Button>
+      </div>
 
       {state.status === "loading" ? (
         <CardSkeleton className="mt-8" count={6} />
@@ -23,11 +40,15 @@ export function PagesRoute() {
         <div className="anim-fade-up mt-8 rounded-lg border border-dashed border-st-border p-12 text-center">
           <p className="text-step-0 font-medium">아직 페이지가 없습니다.</p>
           <p className="mt-2 text-step-n1 text-st-muted-foreground">
-            에이전트에게 원하는 화면을 설명하거나, 직접 만들어 보세요.
+            빈 페이지를 만들어 두면 에이전트에게 무엇을 놓을지 설명할 수 있습니다.
           </p>
-          <pre className="mx-auto mt-4 w-fit rounded-md bg-st-muted px-3 py-2 text-step-n2 font-mono">
-            ie page create &quot;대시보드&quot;
-          </pre>
+          {/*
+            예전에는 여기서 `ie page create` 를 복사해 터미널로 나가라고 안내했다. 만들기가
+            화면 안에 생긴 지금 그 안내는 더 먼 길을 가리킨다 — 같은 일을 하는 버튼을 둔다.
+          */}
+          <Button className="mt-5" variant="primary" onClick={() => setCreating(true)}>
+            첫 페이지 만들기
+          </Button>
         </div>
       ) : (
         <ul className="anim-fade-up mt-8 grid gap-3 sm:grid-cols-2">
@@ -61,6 +82,17 @@ export function PagesRoute() {
           ))}
         </ul>
       )}
+
+      <CreateDialog
+        open={creating}
+        onClose={() => setCreating(false)}
+        title="새 페이지"
+        description="빈 페이지가 만들어집니다. 무엇을 놓을지는 만든 뒤에 정합니다."
+        label="제목"
+        placeholder="예: 대시보드"
+        submitLabel="만들기"
+        onSubmit={create}
+      />
     </div>
   );
 }

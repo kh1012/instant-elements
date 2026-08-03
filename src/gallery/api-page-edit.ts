@@ -1,6 +1,7 @@
 import type { ResolvedConfig } from "../config/types.js";
 import { resolveActorName } from "../identity/store.js";
 import {
+  createPage,
   listSnapshots,
   readPage,
   readSnapshot,
@@ -10,23 +11,55 @@ import {
 import { isValidSlug } from "../page/slug.js";
 import { isSameOrigin, json, readBody, type Req, type Res } from "./http.js";
 
+/** 제목 길이 상한. 슬러그는 64자에서 잘리지만 제목 자체는 그보다 길어도 되고, 다만 무한은 아니다. */
+const MAX_TITLE = 200;
+
 /**
- * 페이지를 **고치는** API — 제목 수정과 버전 복원.
+ * 페이지를 **쓰는** API — 생성·제목 수정·버전 복원.
  *
- * 둘 다 `savePage` 를 통과한다. 파일을 직접 쓰지 않는 이유는 그 함수가 **낙관적 동시성**을
- * 들고 있기 때문이다 — 읽기와 쓰기 사이에 에이전트가 저장했으면 거부한다. 우회해서 쓰면
- * 리뷰어가 제목을 고치는 사이 에이전트가 조립한 내용이 통째로 사라진다.
+ * 수정과 복원은 `savePage` 를 통과한다. 파일을 직접 쓰지 않는 이유는 그 함수가 **낙관적
+ * 동시성**을 들고 있기 때문이다 — 읽기와 쓰기 사이에 에이전트가 저장했으면 거부한다.
+ * 우회해서 쓰면 리뷰어가 제목을 고치는 사이 에이전트가 조립한 내용이 통째로 사라진다.
  *
  * ── 복원이 왜 "되돌리기"가 아니라 "새 버전"인가
  * 스냅샷의 내용을 **새 버전으로 다시 저장한다**(v1.0.5 → v1.0.6, 내용은 v1.0.2 의 것).
  * 버전을 v1.0.2 로 되감으면 그 사이의 스냅샷들이 덮어써지고, 되돌린 것을 다시 되돌릴 수 없다.
  * 앞으로만 가는 기록이 되돌리기를 안전하게 만든다.
+ *
+ * ── 생성이 여기 있는 이유
+ * `createPage` 는 슬러그 충돌 회피·초기 스냅샷·`created` 히스토리를 한 묶음으로 들고 있다.
+ * 갤러리가 그걸 우회해 파일을 직접 만들면 CLI 로 만든 페이지와 이력 모양이 달라진다.
+ * `ie page create` 와 **같은 함수**를 부르는 것이 두 입구를 하나로 유지하는 유일한 방법이다.
  */
 export function createPageEditApi(config: ResolvedConfig) {
   const store = () => ({ pagesDir: config.pagesDir, actor: resolveActorName(config.root) });
 
   return {
     handle(req: Req, res: Res, path: string): boolean {
+      if (path === "/api/pages" && req.method === "POST") {
+        if (!isSameOrigin(req)) {
+          json(res, { error: "cross-origin 요청은 거부합니다." }, 403);
+          return true;
+        }
+        void readBody(req)
+          .then((body) => {
+            const title = (body as { title?: unknown }).title;
+            if (typeof title !== "string" || !title.trim()) {
+              return json(res, { error: "title 이 비어 있습니다." }, 400);
+            }
+            if (title.length > MAX_TITLE) {
+              return json(res, { error: `title 이 너무 깁니다(최대 ${MAX_TITLE}자).` }, 400);
+            }
+            const created = createPage(store(), title.trim());
+            // path 는 돌려주지 않는다 — 브라우저가 쓸 데가 없고 디스크 구조만 드러난다.
+            return json(res, { slug: created.slug, version: created.version, title: title.trim() }, 201);
+          })
+          .catch((err: unknown) => {
+            json(res, { error: err instanceof Error ? err.message : String(err) }, 400);
+          });
+        return true;
+      }
+
       const versions = /^\/api\/pages\/([^/]+)\/versions$/.exec(path);
       if (versions && req.method === "GET") {
         const slug = decodeURIComponent(versions[1] ?? "");

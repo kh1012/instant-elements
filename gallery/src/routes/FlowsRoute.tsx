@@ -1,28 +1,34 @@
+import { useState } from "react";
+import { createFlow, fetchFlows } from "../lib/api";
 import { relativeTime } from "../lib/format";
 import { useAsync } from "../lib/useAsync";
-import { Link } from "../router";
+import { Link, navigate } from "../router";
+import { Button } from "../components/Button";
 import { CardSkeleton } from "../components/CardSkeleton";
-
-interface FlowSummary {
-  slug: string;
-  name: string;
-  screens: number;
-  edges: number;
-  updatedAt: string;
-}
+import { CreateDialog } from "../components/CreateDialog";
 
 export function FlowsRoute() {
-  const state = useAsync(
-    () => fetch("/api/flows").then((r) => r.json() as Promise<{ flows: FlowSummary[] }>),
-    [],
-  );
+  const state = useAsync(fetchFlows, []);
+  const [creating, setCreating] = useState(false);
+
+  const create = async (name: string): Promise<void> => {
+    const { slug } = await createFlow(name);
+    navigate(`/flows/${encodeURIComponent(slug)}`);
+  };
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-10">
-      <h1 className="text-step-2 font-semibold">흐름</h1>
-      <p className="mt-2 text-step-n1 text-st-muted-foreground">
-        만든 페이지를 이어 붙여 실제 서비스처럼 화면을 넘기며 시연합니다.
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-step-2 font-semibold">흐름</h1>
+          <p className="mt-2 text-step-n1 text-st-muted-foreground">
+            만든 페이지를 이어 붙여 실제 서비스처럼 화면을 넘기며 시연합니다.
+          </p>
+        </div>
+        <Button variant="primary" onClick={() => setCreating(true)}>
+          새 흐름
+        </Button>
+      </div>
 
       {state.status === "loading" ? (
         <CardSkeleton className="mt-8" count={3} />
@@ -31,9 +37,12 @@ export function FlowsRoute() {
       ) : state.value.flows.length === 0 ? (
         <div className="anim-fade-up mt-8 rounded-lg border border-dashed border-st-border p-12 text-center">
           <p className="text-step-0 font-medium">아직 흐름이 없습니다.</p>
-          <pre className="mx-auto mt-4 w-fit rounded-md bg-st-muted px-3 py-2 text-step-n2 font-mono">
-            ie flow create &quot;온보딩&quot;
-          </pre>
+          <p className="mt-2 text-step-n1 text-st-muted-foreground">
+            빈 흐름을 만든 뒤, 페이지를 화면으로 얹고 이어 붙입니다.
+          </p>
+          <Button className="mt-5" variant="primary" onClick={() => setCreating(true)}>
+            첫 흐름 만들기
+          </Button>
         </div>
       ) : (
         <ul className="anim-fade-up mt-8 grid gap-3 sm:grid-cols-2">
@@ -53,6 +62,17 @@ export function FlowsRoute() {
           ))}
         </ul>
       )}
+
+      <CreateDialog
+        open={creating}
+        onClose={() => setCreating(false)}
+        title="새 흐름"
+        description="빈 흐름이 만들어집니다. 화면은 만든 뒤에 얹습니다."
+        label="이름"
+        placeholder="예: 온보딩"
+        submitLabel="만들기"
+        onSubmit={create}
+      />
     </div>
   );
 }
