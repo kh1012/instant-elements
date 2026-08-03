@@ -1,6 +1,9 @@
 import { flagBool, flagString } from "../args.js";
 import { defineCommand } from "../command.js";
 import { readCredentials } from "../../auth/credentials.js";
+import { checkGallery } from "../../gallery/status.js";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { resolveActorName } from "../../identity/store.js";
 import { resolveConfig } from "../../config/resolve.js";
 import { installBundle, validateBundle } from "../../registry/install.js";
@@ -51,6 +54,23 @@ export const addCommand = defineCommand({
 
     const configFile = flagString(args.flags, "config");
     const config = await resolveConfig({ cwd, ...(configFile ? { configFile } : {}) });
+
+    /*
+     * 도구 자신의 소스 트리에는 설치하지 않는다.
+     *
+     * 여기서 받으면 `src/elements/` 가 생겨 라이브러리 빌드가 깨진다(루트 tsconfig 는 JSX 를
+     * 켜지 않는다). 실제로 그렇게 깨졌다. 설치 대상은 **컴포넌트를 쓰는 프로젝트**이지 그
+     * 컴포넌트를 만들어 내는 도구가 아니다.
+     *
+     * package.json 의 이름으로 판단한다 — 경로로 맞추면 클론 위치마다 달라진다.
+     */
+    const selfName = readPackageName(config.root);
+    if (selfName === "instant-elements") {
+      throw new CliError("instant-elements 저장소 안에는 설치할 수 없습니다.", {
+        exitCode: 64,
+        hint: "컴포넌트를 쓰는 프로젝트에서 실행하세요. 시험해 보려면 examples/vite-react 에서 해 보세요.",
+      });
+    }
 
     let raw: unknown;
     let charged: string | null = null;
@@ -120,9 +140,24 @@ export const addCommand = defineCommand({
       warn(`  ${file} 는 이미 있어 건드리지 않았습니다.`);
     }
     info("");
-    info(
-      `  갤러리  ${color.cyan(`http://${config.gallery.host}:${config.gallery.port}/c/${result.entry.name}`)}`,
-    );
+
+    /*
+     * 갤러리 주소는 **떠 있을 때만** 링크로 준다.
+     *
+     * 예전에는 무조건 `http://127.0.0.1:9221/c/<name>` 을 적었다. 설치만 하고 갤러리를 안 띄운
+     * 사람에게는 죽은 링크고, 그 포트는 이 프로젝트와 아무 상관이 없을 수도 있다(기본값일
+     * 뿐이다). 이 도구는 이미 "검증 안 된 링크를 확인된 것처럼 말하지 않는다"는 규칙을 갖고
+     * 있다(page-create GUIDE) — 여기만 예외일 이유가 없다.
+     *
+     * 짧은 타임아웃으로 한 번만 물어본다. 못 뜨면 띄우는 방법을 알려 주는 편이 낫다.
+     */
+    const gallery = await checkGallery(config, { timeoutMs: 400 });
+    const galleryUrl = `http://${config.gallery.host}:${config.gallery.port}/c/${result.entry.name}`;
+    if (gallery.state === "ours") {
+      info(`  갤러리  ${color.cyan(galleryUrl)}`);
+    } else {
+      info(`  ${color.dim(`갤러리를 띄우면 여기서 봅니다 — ie gallery → ${galleryUrl}`)}`);
+    }
     /*
      * 토큰이 얼마나 나갔는지 말해 준다. 조용히 깎으면 나중에 "왜 줄었지"를 물을 곳이 없다.
      * 0 이면 이미 받은 적 있는 것이다 — 그 사실도 알려 줘야 재설치를 망설이지 않는다.
@@ -140,3 +175,14 @@ export const addCommand = defineCommand({
     info(`  ${color.dim("이제 내 컴포넌트입니다 — 고치고 기록하는 절차가 그대로 걸립니다.")}`);
   },
 });
+
+/** 이 디렉토리가 어떤 패키지인가. 없으면 null — 설치를 막을 근거가 못 된다. */
+function readPackageName(root: string): string | null {
+  try {
+    const raw = readFileSync(join(root, "package.json"), "utf8");
+    const parsed = JSON.parse(raw) as { name?: unknown };
+    return typeof parsed.name === "string" ? parsed.name : null;
+  } catch {
+    return null;
+  }
+}
