@@ -1,6 +1,6 @@
 {
   "name": "instant-elements",
-  "version": "1.28.1",
+  "version": "1.28.2",
   "type": "module",
   "publishConfig": {
     "access": "public"
