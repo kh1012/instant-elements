@@ -7,6 +7,7 @@ import { LinkNotice } from "./components/LinkNotice";
 import { RunPanel } from "./components/RunPanel";
 import { SearchBox } from "./components/SearchBox";
 import { ShortcutsDialog } from "./components/ShortcutsDialog";
+import { ToastHost } from "./components/ToastHost";
 import { AgentProvider } from "./lib/agent-store";
 import { HeaderSearchProvider } from "./lib/header-search";
 import { useIdentity } from "./lib/identity";
@@ -74,6 +75,8 @@ function Shell() {
         <ShortcutsDialog />
         <RunPanel />
         <IdentityModal open={identityOpen} onClose={() => setIdentityOpen(false)} />
+        {/* 라우트 밖이다 — 삭제처럼 화면을 떠나게 만드는 조작의 결과가 이동 중에 사라지면 안 된다. */}
+        <ToastHost />
 
         <main key={path} className="anim-fade-in">
           {detail?.[1] ? (

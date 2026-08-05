@@ -129,6 +129,25 @@ body {
 }
 
 /*
+ * 토스트 등장. 아래에서 올라오는 fade-up 과 달리 **제자리에서 살짝 커진다** — 화면 하단
+ * 고정 위치에 뜨는 것이라, 이동해 들어오면 스크롤 중인 본문과 움직임이 섞여 읽힌다.
+ */
+@keyframes ie-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.anim-pop-in {
+  animation: ie-pop-in var(--dur-fast) var(--ease-smooth) both;
+}
+
+/*
  * "지금 돌고 있다"는 점.
  *
  * 회전하는 스피너를 쓰지 않는다 — 헤더의 6px 짜리 점에서는 회전이 보이지 않고, 화면 구석에서
