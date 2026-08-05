@@ -8,6 +8,7 @@ import { buildIndex } from "../../registry/index-file.js";
 import { tryReadEntry } from "../../registry/entry.js";
 import {
   createPage,
+  deletePage,
   listPages,
   listSnapshots,
   readPage,
@@ -15,6 +16,7 @@ import {
   readSnapshot,
   savePage,
 } from "../../page/store.js";
+import { listFlows } from "../../flow/store.js";
 import { emptyPageData, type PageData } from "../../page/schema.js";
 import { isBumpKind } from "../../page/version.js";
 import { pageErrors, validatePageData, type PageIssue } from "../../page/validate.js";
@@ -279,6 +281,46 @@ async function runVersions(ctx: CommandContext): Promise<void> {
 }
 
 /**
+ * 페이지를 지운다.
+ *
+ * ── 왜 y/n 을 묻지 않나
+ * 이 CLI 에는 대화형 프롬프트가 하나도 없다. 사람보다 **에이전트가 더 자주 몬다**. 프롬프트를
+ * 두면 에이전트가 답할 수 없어 그 자리에서 멈춘다.
+ *
+ * 대신 `--yes` 없이 부르면 **무엇이 지워지는지 보여 주고 끝난다.** y/n 보다 나은 게, y 를 누를
+ * 사람은 어차피 목록을 보고 판단하고 싶어 하는데 프롬프트는 그걸 못 보여 준다.
+ */
+async function runRemove(ctx: CommandContext): Promise<void> {
+  const config = await loadConfig(ctx);
+  const slug = requireSlug(ctx, "ie page rm <slug> --yes");
+  const page = readPage(config.pagesDir, slug); // 없으면 66 으로 여기서 끝난다.
+
+  // 어느 흐름이 이 페이지를 화면으로 쓰고 있나 — 지우면 그 흐름들에서도 빠진다.
+  const affected = listFlows(config.flowsDir)
+    .filter((flow) => flow.screens.some((s) => s.slug === slug))
+    .map((flow) => flow.slug);
+
+  if (!flagBool(ctx.args.flags, "yes")) {
+    info(`${color.dim("예행 —")} 지우려면 ${color.cyan("--yes")} 를 붙이세요.`);
+    info("");
+    info(`  페이지  ${slug} · v${page.version} · 최상위 ${page.data.content.length}개`);
+    info(`  함께    본문 · 편집 이력 · 리뷰 피드백 · 스냅샷 ${listSnapshots(config.pagesDir, slug).length}개`);
+    if (affected.length > 0) {
+      info(`  흐름    ${affected.join(" · ")} ${color.dim("← 이 화면이 빠집니다")}`);
+    }
+    return;
+  }
+
+  const result = deletePage({ ...storeOptions(config), flowsDir: config.flowsDir }, slug);
+  if (flagBool(ctx.args.flags, "json")) return emitJson({ slug, ...result });
+
+  ok(`${slug} 삭제`);
+  if (result.detachedFlows.length > 0) {
+    info(`  흐름에서도 뺐습니다 — ${result.detachedFlows.join(" · ")}`);
+  }
+}
+
+/**
  * 조립에 쓸 수 있는 컴포넌트 목록.
  *
  * 기본으로 **데모가 있는 것만** 준다 — 데모가 없으면 미리보기가 그리지 못해 페이지에 놓아도
@@ -331,6 +373,7 @@ export const pageCommand = defineCommand({
     "history <slug>        편집 이력(최신순)",
     "versions <slug>       스냅샷 목록 · --at <version> 으로 그 시점 내용",
     "catalog [--all]       조립 가능 컴포넌트(기본 = 데모 보유 = 렌더 가능)",
+    "rm <slug> --yes      지운다. --yes 없이 부르면 무엇이 지워질지만 보여 준다",
   ],
   async run(ctx) {
     const sub = ctx.args.positionals[0];
@@ -351,10 +394,12 @@ export const pageCommand = defineCommand({
         return runVersions(ctx);
       case "catalog":
         return runCatalog(ctx);
+      case "rm":
+        return runRemove(ctx);
       default:
         throw new CliError(`알 수 없는 하위 명령: ${sub ?? "(없음)"}`, {
           exitCode: 64,
-          hint: "사용 가능: list · get · create · set · check · history · versions · catalog",
+          hint: "사용 가능: list · get · create · set · check · history · versions · catalog · rm",
         });
     }
   },

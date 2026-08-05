@@ -3,7 +3,7 @@ import { defineCommand, type CommandContext } from "../command.js";
 import { resolveActorName } from "../../identity/store.js";
 import { resolveConfig } from "../../config/resolve.js";
 import type { ResolvedConfig } from "../../config/types.js";
-import { createFlow, listFlows, readFlow, writeFlow } from "../../flow/store.js";
+import { createFlow, deleteFlow, listFlows, readFlow, writeFlow } from "../../flow/store.js";
 import { checkFlowIntegrity } from "../../flow/schema.js";
 import { readPage } from "../../page/store.js";
 import { validatePageData } from "../../page/validate.js";
@@ -143,6 +143,34 @@ async function runLink(ctx: CommandContext): Promise<void> {
 }
 
 /**
+ * 흐름을 지운다.
+ *
+ * **화면으로 쓴 페이지는 남는다** — 흐름은 페이지를 참조할 뿐 소유하지 않고, 같은 페이지가
+ * 여러 흐름에 편입되는 게 정상이다. 흐름을 지웠다고 페이지가 사라지면 시연 하나 정리하다
+ * 다른 시연이 깨진다.
+ *
+ * `--yes` 를 요구하는 이유는 `ie page rm` 과 같다 — 이 CLI 에는 대화형 프롬프트가 없다.
+ */
+async function runRemove(ctx: CommandContext): Promise<void> {
+  const config = await loadConfig(ctx);
+  const slug = requireSlug(ctx, "ie flow rm <flow> --yes");
+  const flow = readFlow(config.flowsDir, slug); // 없으면 66 으로 여기서 끝난다.
+
+  if (!flagBool(ctx.args.flags, "yes")) {
+    info(`${color.dim("예행 —")} 지우려면 ${color.cyan("--yes")} 를 붙이세요.`);
+    info("");
+    info(`  흐름    ${slug} · ${flow.name}`);
+    info(`  잃는 것  화면 배치 ${flow.screens.length}개 · 연결 ${flow.edges.length}개`);
+    info(`  ${color.dim("페이지는 남습니다 — 흐름은 페이지를 참조할 뿐입니다.")}`);
+    return;
+  }
+
+  const deleted = deleteFlow(config.flowsDir, slug);
+  if (flagBool(ctx.args.flags, "json")) return emitJson({ slug, deleted });
+  ok(`${slug} 삭제 · 페이지 ${flow.screens.length}개는 그대로`);
+}
+
+/**
  * 흐름 정합성 + **편입된 페이지 각각의 구조**를 함께 본다.
  *
  * 흐름은 자기가 가리키는 페이지만큼만 정확할 수 있다. 특히 **id 중복**은 흐름 쪽에서 보이지
@@ -225,6 +253,7 @@ export const flowCommand = defineCommand({
     "add <flow>         --screen <page-slug>   화면 편입(그 시점 버전으로 박제)",
     "link <flow>        --from <page:node> --to <page> [--action <prop>] [--value <arg>]",
     "check <flow>       흐름 정합성 + 편입된 각 화면의 구조까지 검사한다",
+    "rm <flow> --yes    지운다. 화면으로 쓴 페이지는 남는다",
   ],
   async run(ctx) {
     switch (ctx.args.positionals[0]) {
@@ -238,10 +267,12 @@ export const flowCommand = defineCommand({
         return runLink(ctx);
       case "check":
         return runCheck(ctx);
+      case "rm":
+        return runRemove(ctx);
       default:
         throw new CliError(`알 수 없는 하위 명령: ${ctx.args.positionals[0] ?? "(없음)"}`, {
           exitCode: 64,
-          hint: "사용 가능: list · create · add · link · check",
+          hint: "사용 가능: list · create · add · link · check · rm",
         });
     }
   },
