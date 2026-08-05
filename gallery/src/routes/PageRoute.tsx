@@ -2,16 +2,19 @@ import { useCallback, useEffect, useState } from "react";
 import galleryConfig from "virtual:ie/config";
 import { resolveFrame, type FrameId, type PageNode } from "instant-elements/page";
 import { Button } from "../components/Button";
+import { ConfirmDeleteDialog } from "../components/ConfirmDeleteDialog";
 import {
   addFeedback,
   clearFeedback,
   deleteFeedback,
+  deletePage,
   fetchFeedback,
   fetchPage,
   type FeedbackItem,
 } from "../lib/api";
 import { cn } from "../lib/cn";
 import { relativeTime } from "../lib/format";
+import { toast } from "../lib/toast";
 import { useAsync } from "../lib/useAsync";
 import { FeedbackPanel } from "../page/FeedbackPanel";
 import { FrameToggle, PageFrame, ZoomControl } from "../page/PageFrame";
@@ -20,7 +23,7 @@ import { PageSketch, type SketchMode } from "../page/PageSketch";
 import { PageHistory } from "./PageRoute.history";
 import { PageTitle } from "./PageRoute.title";
 import { PageVersions } from "./PageRoute.versions";
-import { Link } from "../router";
+import { Link, navigate } from "../router";
 
 type ViewMode = SketchMode | "live";
 
@@ -43,6 +46,7 @@ export function PageRoute({ slug }: { slug: string }) {
   const [zoom, setZoom] = useState(1);
   const [target, setTarget] = useState<PageNode | null>(null);
   const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -79,6 +83,20 @@ export function PageRoute({ slug }: { slug: string }) {
 
   const clearAll = useCallback(async () => {
     setFeedback((await clearFeedback(slug)).items);
+  }, [slug]);
+
+  const removePage = useCallback(async () => {
+    const { detachedFlows } = await deletePage(slug);
+    /*
+     * 토스트를 먼저 쏘고 이동한다. 이동이 먼저면 라우트가 바뀌는 사이 호출이 묻힌다
+     * (`ToastHost` 가 라우트 밖에 있는 이유가 이것이다).
+     */
+    toast(
+      detachedFlows.length > 0
+        ? `페이지를 지웠습니다.\n흐름에서도 뺐습니다 — ${detachedFlows.join(" · ")}`
+        : "페이지를 지웠습니다.",
+    );
+    navigate("/pages");
   }, [slug]);
 
   if (state.status === "loading") return <Centered>불러오는 중…</Centered>;
@@ -156,8 +174,32 @@ export function PageRoute({ slug }: { slug: string }) {
           <Button size="sm" onClick={state.reload}>
             새로고침
           </Button>
+          {/*
+            삭제는 툴바 맨 끝이다 — 새로고침·프레임 같은 무해한 것들 사이에 끼면 손이 지나가다
+            누른다. 색도 여기서만 위험색이다.
+          */}
+          <Button size="sm" variant="danger" onClick={() => setDeleting(true)}>
+            지우기
+          </Button>
         </div>
       </header>
+
+      <ConfirmDeleteDialog
+        open={deleting}
+        onClose={() => setDeleting(false)}
+        title="페이지 지우기"
+        confirmWord={slug}
+        description={
+          <>
+            <p>
+              <strong className="text-st-foreground">{page.title || slug}</strong> 의 본문 · 편집
+              이력 · 리뷰 · 스냅샷이 모두 사라집니다. 되돌릴 수 없습니다.
+            </p>
+            <p className="mt-2">이 페이지를 화면으로 쓰는 흐름에서도 함께 빠집니다.</p>
+          </>
+        }
+        onConfirm={removePage}
+      />
 
       <div className="mt-6 flex flex-col gap-6 xl:flex-row">
         <div className="min-w-0 flex-1">

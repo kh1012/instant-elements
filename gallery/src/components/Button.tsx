@@ -1,14 +1,24 @@
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { cn } from "../lib/cn";
 
-type Variant = "primary" | "outline" | "ghost";
+type Variant = "primary" | "outline" | "ghost" | "danger";
 type Size = "sm" | "md";
 
+/*
+ * 표면은 **여기서만** 정한다.
+ *
+ * `cn` 은 단순 join 이라(tailwind-merge 없음) 호출부에서 `className="bg-…"` 로 덮으면 두 배경
+ * 클래스가 함께 남고, 승자는 생성된 CSS 의 순서가 정한다 — 화면마다 다르게 보이고 원인을 못 찾는다.
+ * 새 표면이 필요하면 variant 를 늘린다.
+ */
 const VARIANTS: Record<Variant, string> = {
   primary: "bg-st-primary text-st-primary-foreground hover:opacity-90",
   outline:
     "border border-st-button-secondary-border bg-st-button-secondary-bg hover:bg-st-button-secondary-hover-bg",
   ghost: "hover:bg-st-button-ghost-hover-bg",
+  /** 되돌릴 수 없는 조작. 한 화면에 하나만 있어야 색이 경고로 읽힌다. */
+  danger:
+    "border border-st-destructive/40 bg-st-destructive/10 text-st-destructive hover:bg-st-destructive/20",
 };
 
 const SIZES: Record<Size, string> = {

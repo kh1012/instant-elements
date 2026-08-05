@@ -192,6 +192,21 @@ export function createFlow(name: string): Promise<{ slug: string; name: string }
   return send("/api/flows", "POST", { name });
 }
 
+// ── 지우기
+//
+// **없으면 성공으로 친다**(`deleted:false`). 목록이 조금 옛것이어서 두 번 눌렀을 때
+// "지웠는데 실패했다"가 뜨는 쪽이 더 혼란스럽다 — 부르는 쪽은 "지금 없다"를 원했고 결과가 그렇다.
+
+export function deletePage(
+  slug: string,
+): Promise<{ slug: string; deleted: boolean; detachedFlows: string[] }> {
+  return send(`/api/pages/${encodeURIComponent(slug)}`, "DELETE");
+}
+
+export function deleteFlow(slug: string): Promise<{ slug: string; deleted: boolean }> {
+  return send(`/api/flows/${encodeURIComponent(slug)}`, "DELETE");
+}
+
 // ── 흐름 목록·설정
 
 export interface FlowSummary {
