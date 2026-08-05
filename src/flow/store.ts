@@ -1,4 +1,4 @@
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, rmSync } from "node:fs";
 import { CliError } from "../cli/ui.js";
 import { readJsonClassified, writeJsonAtomic } from "../registry/io.js";
 import { withFileLock } from "../page/lock.js";
@@ -58,6 +58,72 @@ export function tryReadFlow(flowsDir: string, slug: string): FlowFile | null {
 
 export function flowExists(flowsDir: string, slug: string): boolean {
   return isValidSlug(slug) && existsSync(flowPath(flowsDir, slug));
+}
+
+/**
+ * 흐름에서 화면 하나를 뺀 결과 — **순수 함수**.
+ *
+ * 화면만 빼면 그 화면을 드나들던 연결이 허공을 가리키고, 시작 화면이었으면 재생이 빈 화면에서
+ * 시작한다. 셋을 함께 정리하는 것이 "화면을 뺀다"의 온전한 뜻이다.
+ *
+ * 세 곳이 이 규칙을 쓴다 — 갤러리의 화면 제외, `ie flow screen --remove`, 그리고 **페이지 삭제
+ * 연쇄**. 각자 구현하면 반드시 갈라지고, 갈라진 쪽이 끊긴 연결을 남긴다.
+ */
+export function withoutScreen(flow: FlowFile, pageSlug: string): FlowFile {
+  const screens = flow.screens.filter((s) => s.slug !== pageSlug);
+  const next: FlowFile = {
+    ...flow,
+    screens,
+    edges: flow.edges.filter((e) => e.from.slug !== pageSlug && e.to !== pageSlug),
+  };
+
+  if (flow.start === pageSlug) {
+    const heir = screens[0]?.slug;
+    // 남은 화면이 없으면 시작점 자체를 지운다 — 빈 문자열을 두면 "지정됨"으로 읽힌다.
+    if (heir) next.start = heir;
+    else delete next.start;
+  }
+  return next;
+}
+
+/**
+ * 이 페이지를 편입한 **모든** 흐름에서 뺀다. 실제로 바뀐 흐름의 slug 를 돌려준다.
+ *
+ * 페이지 삭제가 부르는 정리 단계다. 안 하면 흐름이 스냅샷 없는 화면을 안고 재생되고, 그 사실은
+ * 재생을 눌러 봐야 안다.
+ *
+ * 손상된 흐름 하나 때문에 삭제가 통째로 막히면 안 되므로 `listFlows` 가 읽어낸 것만 다룬다
+ * (그 함수가 이미 손상된 파일을 건너뛴다).
+ */
+export function detachPageFromFlows(
+  options: { flowsDir: string; actor: string },
+  pageSlug: string,
+): string[] {
+  const touched: string[] = [];
+  for (const flow of listFlows(options.flowsDir)) {
+    if (!flow.screens.some((s) => s.slug === pageSlug)) continue;
+    writeFlow(options, flow.slug, (current) => withoutScreen(current, pageSlug));
+    touched.push(flow.slug);
+  }
+  return touched;
+}
+
+/**
+ * 흐름 파일을 지운다. 이미 없으면 `false` — **오류가 아니다.**
+ *
+ * 목록이 조금 옛것이어서 두 번 눌렀을 때 "지웠는데 실패했다"가 뜨는 쪽이 더 혼란스럽다.
+ * 부르는 쪽은 "지금 없다"를 원했고 결과가 그렇다.
+ *
+ * 화면(페이지)은 건드리지 않는다 — 흐름은 페이지를 **참조**할 뿐 소유하지 않는다. 같은 페이지가
+ * 여러 흐름에 편입되는 게 정상이다.
+ */
+export function deleteFlow(flowsDir: string, slug: string): boolean {
+  const path = flowPath(flowsDir, slug);
+  return withFileLock(path, () => {
+    if (!existsSync(path)) return false;
+    rmSync(path, { force: true });
+    return true;
+  });
 }
 
 export function createFlow(

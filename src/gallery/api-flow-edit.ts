@@ -1,6 +1,6 @@
 import type { ResolvedConfig } from "../config/types.js";
 import { FRAMES } from "../page/schema.js";
-import { createFlow, readFlow, writeFlow } from "../flow/store.js";
+import { createFlow, deleteFlow, readFlow, withoutScreen, writeFlow } from "../flow/store.js";
 import { tryReadPage } from "../page/store.js";
 import { isValidSlug } from "../page/slug.js";
 import { isSameOrigin, json, readBody, type Req, type Res } from "./http.js";
@@ -12,6 +12,7 @@ const MAX_NAME = 200;
  * 흐름을 **쓰는** API.
  *
  * `POST /api/flows` — 새 흐름 만들기.
+ * `DELETE /api/flows/<slug>` — 흐름 지우기(화면으로 쓴 페이지는 남는다).
  * `POST /api/flows/<slug>/screen` — 페이지를 화면으로 편입·제외.
  * `POST /api/flows/<slug>/settings` — 시작 화면·프레임.
  * `POST /api/flows/<slug>/edge` — 이미 있는 연결의 **목적지 변경**.
@@ -49,6 +50,29 @@ export function createFlowEditApi(config: ResolvedConfig) {
           .catch((err: unknown) => {
             json(res, { error: err instanceof Error ? err.message : String(err) }, 400);
           });
+        return true;
+      }
+
+      /*
+       * 흐름 삭제. 화면(페이지)은 건드리지 않는다 — 흐름은 페이지를 참조할 뿐 소유하지 않는다.
+       * 이미 없으면 성공으로 친다(`deleteFlow` 주석 참고).
+       */
+      const remove = /^\/api\/flows\/([^/]+)$/.exec(path);
+      if (remove && req.method === "DELETE") {
+        if (!isSameOrigin(req)) {
+          json(res, { error: "cross-origin 요청은 거부합니다." }, 403);
+          return true;
+        }
+        const target = decodeURIComponent(remove[1] ?? "");
+        if (!isValidSlug(target)) {
+          json(res, { error: "invalid slug" }, 400);
+          return true;
+        }
+        try {
+          json(res, { slug: target, deleted: deleteFlow(config.flowsDir, target) });
+        } catch (err) {
+          json(res, { error: err instanceof Error ? err.message : String(err) }, 400);
+        }
         return true;
       }
 
@@ -91,20 +115,10 @@ export function createFlowEditApi(config: ResolvedConfig) {
             const pageSlug = input.slug;
 
             if (input.remove === true) {
-              const flow = writeFlow(store(actor), slug, (existing) => {
-                const screens = existing.screens.filter((s) => s.slug !== pageSlug);
-                const rest = { ...existing, screens };
-                // 뺀 화면을 가리키던 연결과 시작점을 함께 정리한다 — 남겨 두면 재생이 빈 화면으로 떨어진다.
-                rest.edges = existing.edges.filter(
-                  (e) => e.from.slug !== pageSlug && e.to !== pageSlug,
-                );
-                if (existing.start === pageSlug) {
-                  const next = screens[0]?.slug;
-                  if (next) rest.start = next;
-                  else delete rest.start;
-                }
-                return rest;
-              });
+              // 연결·시작점 정리 규칙은 `withoutScreen` 한 곳에 있다. 페이지 삭제 연쇄도 같은 것을 쓴다.
+              const flow = writeFlow(store(actor), slug, (existing) =>
+                withoutScreen(existing, pageSlug),
+              );
               return json(res, { slug, screens: flow.screens, edges: flow.edges });
             }
 
