@@ -1,6 +1,7 @@
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { CliError } from "../cli/ui.js";
+import { detachPageFromFlows } from "../flow/store.js";
 import { appendLine, readJsonClassified, readJsonl, writeJsonAtomic } from "../registry/io.js";
 import { withFileLock } from "./lock.js";
 import {
@@ -186,6 +187,61 @@ export function createPage(
     });
     return { slug, version: INITIAL_VERSION, path };
   });
+}
+
+export interface DeletePageResult {
+  /** 파일이 실제로 있었나. 이미 없었으면 `false` — 오류는 아니다. */
+  deleted: boolean;
+  /** 이 페이지를 화면으로 갖고 있어 함께 정리된 흐름들. */
+  detachedFlows: string[];
+}
+
+/**
+ * 페이지를 지운다 — **그 페이지를 편입한 흐름까지 함께 정리한다.**
+ *
+ * ── 왜 흐름을 먼저 정리하나
+ * 흐름은 편입 시점 스냅샷(`.versions/<slug>/<version>.json`)을 참조한다. 스냅샷부터 지우면
+ * 그 사이에 실패했을 때 흐름이 읽을 수 없는 화면을 안고 남는다. 참조를 먼저 끊고 파일을 지우면
+ * 중간에 멈춰도 "화면이 하나 빠진 흐름"이라는 **정상 상태**로 끝난다.
+ *
+ * ── 왜 `page/store` 가 흐름을 아는가
+ * 페이지는 흐름을 모르지만 **페이지를 지우는 일**은 본질적으로 두 곳에 걸친다. 연쇄를 부르는
+ * 쪽(CLI·API)에 맡기면 한 곳이 빠뜨렸을 때 끊긴 흐름이 조용히 생긴다. 한 함수가 책임진다.
+ *
+ * ── 없으면 실패가 아니다
+ * `deleted:false` 로 알린다. 목록이 조금 옛것이어서 두 번 눌렀을 때 "지웠는데 실패했다"가
+ * 뜨는 쪽이 더 혼란스럽다.
+ */
+export function deletePage(
+  options: PageStoreOptions & { flowsDir?: string },
+  slug: string,
+): DeletePageResult {
+  const path = pagePath(options.pagesDir, slug);
+
+  const detachedFlows = options.flowsDir
+    ? detachPageFromFlows({ flowsDir: options.flowsDir, actor: options.actor }, normalizeSlug(slug))
+    : [];
+
+  const deleted = withFileLock(path, () => {
+    const existed = existsSync(path);
+
+    // 페이지 하나가 갖는 것 전부 — 본문·이력·리뷰·스냅샷.
+    rmSync(path, { force: true });
+    const history = historyPath(options.pagesDir, slug);
+    if (history) rmSync(history, { force: true });
+    const feedback = fileIn(options.pagesDir, slug, ".feedback.json");
+    if (feedback) rmSync(feedback, { force: true });
+    if (isValidSlug(slug)) {
+      rmSync(join(options.pagesDir, ".versions", normalizeSlug(slug)), {
+        recursive: true,
+        force: true,
+      });
+    }
+
+    return existed;
+  });
+
+  return { deleted, detachedFlows };
 }
 
 export interface SavePageInput {

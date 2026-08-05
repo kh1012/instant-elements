@@ -1,13 +1,16 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { createFlow, readFlow, writeFlow } from "../flow/store.js";
 import { withFileLock } from "./lock.js";
 import { emptyPageData, resolveFrame, type PageData } from "./schema.js";
 import { isValidSlug, normalizeSlug, slugify } from "./slug.js";
 import {
   createPage,
+  deletePage,
   listPages,
+  pageExists,
   listSnapshots,
   PageConflictError,
   readPage,
@@ -124,6 +127,71 @@ describe("페이지 생성", () => {
     const dir = pagesDir();
     const { slug } = createPage(opts(dir), "x");
     expect(listSnapshots(dir, slug)).toEqual(["1.0.0"]);
+  });
+});
+
+describe("페이지 삭제", () => {
+  /** 흐름 하나 — 이 페이지를 화면으로 쓴다. */
+  function flowUsing(dir: string, pageSlug: string): { flowsDir: string; slug: string } {
+    const flowsDir = mkdtempSync(join(tmpdir(), "instant-elements-page-flows-"));
+    created.push(flowsDir);
+    const { slug } = createFlow({ flowsDir, actor: "tester" }, "시연");
+    writeFlow({ flowsDir, actor: "tester" }, slug, (flow) => ({
+      ...flow,
+      start: pageSlug,
+      screens: [
+        { slug: pageSlug, version: "1.0.0" },
+        { slug: "other", version: "1.0.0" },
+      ],
+      edges: [{ id: "e1", from: { slug: pageSlug, nodeId: "n1" }, to: "other" }],
+    }));
+    void dir;
+    return { flowsDir, slug };
+  }
+
+  it("본문·이력·리뷰·스냅샷을 함께 지운다", () => {
+    const dir = pagesDir();
+    const { slug } = createPage(opts(dir), "지울것");
+    writeFileSync(join(dir, `${slug}.feedback.json`), '{"items":[]}');
+    expect(listSnapshots(dir, slug)).toEqual(["1.0.0"]);
+
+    expect(deletePage(opts(dir), slug).deleted).toBe(true);
+
+    expect(pageExists(dir, slug)).toBe(false);
+    expect(readPageHistory(dir, slug)).toEqual([]);
+    expect(listSnapshots(dir, slug)).toEqual([]);
+    expect(existsSync(join(dir, `${slug}.feedback.json`))).toBe(false);
+  });
+
+  it("이미 없으면 deleted:false — 오류가 아니다", () => {
+    const dir = pagesDir();
+    // 목록이 조금 옛것이어서 두 번 눌렀을 때 "지웠는데 실패했다"가 뜨면 더 혼란스럽다.
+    expect(deletePage(opts(dir), "없는페이지").deleted).toBe(false);
+  });
+
+  it("편입한 흐름에서 화면·연결·시작점이 함께 정리된다", () => {
+    const dir = pagesDir();
+    const { slug } = createPage(opts(dir), "화면");
+    const flow = flowUsing(dir, slug);
+
+    const result = deletePage({ ...opts(dir), flowsDir: flow.flowsDir }, slug);
+
+    expect(result.deleted).toBe(true);
+    expect(result.detachedFlows).toEqual([flow.slug]);
+
+    const after = readFlow(flow.flowsDir, flow.slug);
+    expect(after.screens.map((s) => s.slug)).toEqual(["other"]);
+    expect(after.edges).toEqual([]);
+    expect(after.start).toBe("other");
+  });
+
+  it("flowsDir 를 안 주면 흐름은 손대지 않는다", () => {
+    const dir = pagesDir();
+    const { slug } = createPage(opts(dir), "화면");
+    const flow = flowUsing(dir, slug);
+
+    expect(deletePage(opts(dir), slug).detachedFlows).toEqual([]);
+    expect(readFlow(flow.flowsDir, flow.slug).screens).toHaveLength(2);
   });
 });
 

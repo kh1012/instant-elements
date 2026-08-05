@@ -2,6 +2,7 @@ import type { ResolvedConfig } from "../config/types.js";
 import { resolveActorName } from "../identity/store.js";
 import {
   createPage,
+  deletePage,
   listSnapshots,
   readPage,
   readSnapshot,
@@ -15,7 +16,7 @@ import { isSameOrigin, json, readBody, type Req, type Res } from "./http.js";
 const MAX_TITLE = 200;
 
 /**
- * 페이지를 **쓰는** API — 생성·제목 수정·버전 복원.
+ * 페이지를 **쓰는** API — 생성·제목 수정·버전 복원·삭제.
  *
  * 수정과 복원은 `savePage` 를 통과한다. 파일을 직접 쓰지 않는 이유는 그 함수가 **낙관적
  * 동시성**을 들고 있기 때문이다 — 읽기와 쓰기 사이에 에이전트가 저장했으면 거부한다.
@@ -87,6 +88,30 @@ export function createPageEditApi(config: ResolvedConfig) {
           });
 
         return json(res, { slug, current: page.version, versions: list }), true;
+      }
+
+      /*
+       * 페이지 삭제 — 이 페이지를 편입한 흐름까지 함께 정리된다(`deletePage`).
+       * 정리된 흐름 목록을 응답에 실어, 화면이 "무엇이 같이 바뀌었는지"를 말할 수 있게 한다.
+       */
+      const remove = /^\/api\/pages\/([^/]+)$/.exec(path);
+      if (remove && req.method === "DELETE") {
+        if (!isSameOrigin(req)) {
+          json(res, { error: "cross-origin 요청은 거부합니다." }, 403);
+          return true;
+        }
+        const target = decodeURIComponent(remove[1] ?? "");
+        if (!isValidSlug(target)) {
+          json(res, { error: "invalid slug" }, 400);
+          return true;
+        }
+        try {
+          const result = deletePage({ ...store(), flowsDir: config.flowsDir }, target);
+          json(res, { slug: target, ...result });
+        } catch (err) {
+          json(res, { error: err instanceof Error ? err.message : String(err) }, 400);
+        }
+        return true;
       }
 
       const title = /^\/api\/pages\/([^/]+)\/title$/.exec(path);
